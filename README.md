@@ -100,6 +100,6 @@ INTERSECTION table1_name table2_name INTO table3_name;
 Find the difference of records of 2 tables
 of the same type.
 ```
-DIFFERENCE table1_name table2_name into table3_name;
+DIFFERENCE table1_name table2_name INTO table3_name;
 ```
 
