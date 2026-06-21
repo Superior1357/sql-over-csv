@@ -1,14 +1,11 @@
-module Parsers (runCommand, Command) where
+module Parsers (Command, commandParser) where
+import Commands
 import Data.Void (Void)
-import Text.Megaparsec (Parsec, some, sepBy1, runParser, (<|>))
+import Text.Megaparsec (Parsec, some, sepBy1, choice)
 import Text.Megaparsec.Char (string, space1, alphaNumChar, char)
-import Data.List (intercalate)
+import Types (Command (..))
 
 type Parser = Parsec Void String
-newtype Command = Cmd (IO ())
-
-create :: String -> [String] -> IO ()
-create fileName columns = writeFile fileName $ intercalate "," columns
 
 createParser :: Parser Command
 createParser = do
@@ -21,13 +18,36 @@ createParser = do
 alterParser :: Parser Command
 alterParser = undefined
 
-commandParser :: Parser Command
-commandParser = parseCreate <|> parseAlter
-    where
-        parseCreate = string "CREATE" >> createParser
-        parseAlter = string "ALTER" >> alterParser
+insertParser :: Parser Command
+insertParser = undefined
 
-runCommand :: String -> IO ()
-runCommand c = case runParser commandParser "" c of
-    Left err -> putStrLn $ "Invalid command: " ++ show err
-    Right (Cmd commandM) -> commandM
+updateParser :: Parser Command
+updateParser = undefined
+
+deleteParser :: Parser Command
+deleteParser = undefined
+
+selectParser :: Parser Command
+selectParser = undefined
+
+unionParser :: Parser Command
+unionParser = undefined
+
+intersectionParser :: Parser Command
+intersectionParser = undefined
+
+differenceParser :: Parser Command
+differenceParser = undefined
+
+commandParser :: Parser Command
+commandParser = choice [
+                    string "CREATE" >> createParser,
+                    string "INSERT" >> insertParser,
+                    string "UPDATE" >> updateParser,
+                    string "DELETE" >> deleteParser,
+                    string "ALTER" >> alterParser,
+                    string "SELECT" >> selectParser,
+                    string "UNION" >> unionParser,
+                    string "INTERSECTION" >> intersectionParser,
+                    string "DIFFERENCE" >> differenceParser
+                ]

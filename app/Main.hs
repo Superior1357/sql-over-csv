@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -fno-cse #-}
 
 module Main where
-import qualified Parsers (runCommand)
+import qualified LibControl (runCommand)
 import System.Console.CmdArgs.Implicit
 import Control.Monad (forever)
 import System.IO (hFlush, stdout)
@@ -21,11 +21,11 @@ interactiveSession = forever $ do
   putStr "> "
   hFlush stdout
   input <- getLine
-  Parsers.runCommand input
+  LibControl.runCommand input
 
 main :: IO ()
 main = do
   arguments <- cmdArgs (modes [nonInteractive, interactive])
   case arguments of
-    NonInteractive { command = cmd } -> Parsers.runCommand cmd
+    NonInteractive { command = cmd } -> LibControl.runCommand cmd
     Interactive -> interactiveSession
