@@ -1,0 +1,10 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:csv-has-sql"
+
+    - path: "app/Main.hs"
+      component: "csv-has-sql:exe:csv-has-sql"
+
+    - path: "test"
+      component: "csv-has-sql:test:csv-has-sql-test"

@@ -1,4 +1,4 @@
-cabal-version:      3.14
+cabal-version:      3.8
 -- The cabal-version field refers to the version of the .cabal specification,
 -- and can be different from the cabal-install (the tool) version and the
 -- Cabal (the library) version you are using. As such, the Cabal (the library)
@@ -59,7 +59,7 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  MyLib
+    exposed-modules:  Parsers
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -68,7 +68,8 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.3.0
+    build-depends:    base ^>=4.18.3.0,
+                      megaparsec ^>= 9.7.0
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -92,7 +93,8 @@ executable csv-has-sql
     -- Other library packages from which modules are imported.
     build-depends:
         base ^>=4.18.3.0,
-        csv-has-sql
+        csv-has-sql,
+        cmdargs ^>= 0.10
 
     -- Directories containing source files.
     hs-source-dirs:   app
