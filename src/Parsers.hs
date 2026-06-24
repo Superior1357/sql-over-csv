@@ -3,9 +3,8 @@ import Commands
 import Data.Void (Void)
 import Text.Megaparsec (Parsec, some, sepBy1, choice, satisfy)
 import Text.Megaparsec.Char (string, space1, char)
-import Types (Command (..))
+import Types (Command (..), CommandData (..))
 import Control.Applicative (many)
-import Control.Monad (void)
 
 type Parser = Parsec Void String
 
@@ -21,54 +20,44 @@ supportedFilePath = someExcept [' ']
 parseList :: Parser [String]
 parseList = char '(' *> manyExcept [',', '(', ')'] `sepBy1` char ',' <* char ')'
 
-createParser :: Parser Command
-createParser = do
-    space1
-    filename <- supportedFilePath
-    space1
-    Cmd . create filename <$> parseList
+createParser :: Parser CommandData
+createParser = Create <$> parseList <* char ';'
 
-alterParser :: Parser Command
+alterParser :: Parser CommandData
 alterParser = undefined
 
-insertParser :: Parser Command
-insertParser = do
-    space1
-    filename <- supportedFilePath
-    space1
-    columns <- parseList
-    space1
-    void $ string "VALUES"
-    space1
-    Cmd . insert filename columns <$> parseList
+insertParser :: Parser CommandData
+insertParser = Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> parseList `sepBy1` char ',' <* char ';'
 
-updateParser :: Parser Command
+updateParser :: Parser CommandData
 updateParser = undefined
 
-deleteParser :: Parser Command
+deleteParser :: Parser CommandData
 deleteParser = undefined
 
-selectParser :: Parser Command
+selectParser :: Parser CommandData
 selectParser = undefined
 
-unionParser :: Parser Command
+unionParser :: Parser CommandData
 unionParser = undefined
 
-intersectionParser :: Parser Command
+intersectionParser :: Parser CommandData
 intersectionParser = undefined
 
-differenceParser :: Parser Command
+differenceParser :: Parser CommandData
 differenceParser = undefined
 
 commandParser :: Parser Command
 commandParser = choice [
-                    string "CREATE" >> createParser,
-                    string "INSERT" >> space1 >> string "INTO" >> insertParser,
-                    string "UPDATE" >> updateParser,
-                    string "DELETE" >> deleteParser,
-                    string "ALTER" >> alterParser,
-                    string "SELECT" >> selectParser,
-                    string "UNION" >> unionParser,
-                    string "INTERSECTION" >> intersectionParser,
-                    string "DIFFERENCE" >> differenceParser
+                    string "CREATE" >> assembleWith createParser,
+                    string "INSERT" >> space1 >> string "INTO" >> assembleWith insertParser,
+                    string "UPDATE" >> assembleWith updateParser,
+                    string "DELETE" >> assembleWith deleteParser,
+                    string "ALTER" >> assembleWith alterParser,
+                    string "SELECT" >> assembleWith selectParser,
+                    string "UNION" >> assembleWith unionParser,
+                    string "INTERSECTION" >> assembleWith intersectionParser,
+                    string "DIFFERENCE" >> assembleWith differenceParser
                 ]
+    where
+        assembleWith commandDataParser = space1 *> (Cmd <$> supportedFilePath <* space1 <*> commandDataParser)

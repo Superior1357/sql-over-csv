@@ -13,30 +13,34 @@ Commands are evaluated immediately.
     -h      Show this help and exit.
 ### Commands
 #### `CREATE`
-Create a csv file with the given name and format and store it in the working directory.
+Create a csv file with the given name, header and store it in the working directory.
 
 ```
 CREATE table_name (
     column1_name, 
     column2_name,
-    ...
+    ...,
+    columnN_name
 );
 ```
 ##### Example
 ###### Input
-    CREATE (column1, column2)
+    CREATE name_ids (name, id);
 ###### Output
-> ./table_name.csv:
+> ./name_ids.csv:
 ```
-column1,column2
+name,id
+
 ```
 
 #### `INSERT INTO`
 Add new records with specified values to a specified table.
 ```
 INSERT INTO table_name (column1 column2, column3, ...)
-VALUES (value1, value2, value3, ...);
+VALUES (value11, value12, value13, ...),
+       (value21, value22, value23, ...);
 ```
+
 #### `UPDATE`
 Update or modify one or more records in the table.
 ```
@@ -44,6 +48,7 @@ UPDATE table_name
 SET column1 = value1, column2 = value2, ...
 WHERE condition;
 ```
+
 #### `WHERE`
 The WHERE clause is used to extract only those records that fulfill a specific condition.
 ##### Supported operators
@@ -68,7 +73,7 @@ Add, modify or delete columns.
 ##### ADD
 Add a column with the given name.
 ```
-ALTER table_name ADD column_name
+ALTER table_name ADD column_name;
 ```
 ##### DROP
 Delete a column with the given name.
@@ -78,7 +83,7 @@ ALTER table_name DROP COLUMN column_name;
 ##### RENAME
 Rename a column.
 ```
-ALTER table_name RENAME COLUMN old_column_name to new_column_name;
+ALTER table_name RENAME COLUMN old_column_name TO new_column_name;
 ```
 #### SELECT
 Select data from a table.
