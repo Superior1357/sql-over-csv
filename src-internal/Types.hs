@@ -2,7 +2,16 @@ module Types where
 
 type RecordType = String
 type ColumnType = String
-type WhereCondition = ( CsvType -> Bool )
+
+data WhereCondition = Equal ColumnType RecordType |
+                      Greater ColumnType RecordType |
+                      Less ColumnType RecordType |
+                      GreaterEqual ColumnType RecordType |
+                      LessEqual ColumnType RecordType |
+                      NotEqual ColumnType RecordType |
+                      Between ColumnType [RecordType] |
+                      In ColumnType [RecordType] |
+                      Nothing
 
 data CsvType = CSVInt (Maybe Int) | CSVString (Maybe String) | CSVBool (Maybe Bool)
 
@@ -26,12 +35,12 @@ data CommandData =
     } |
 
     Update {
-        columnsToUpdate :: [(ColumnType, RecordType)]
-        -- condition :: WhereCondition       
+        valueUpdates :: [(ColumnType, RecordType)],
+        condition :: WhereCondition
     } |
 
     Delete {
-        -- condition :: WhereCondition
+        condition :: WhereCondition
     } |
 
     Alter {
@@ -45,7 +54,7 @@ data CommandData =
     } |
 
     Select {
-        columns :: [ColumnType] 
+        columns :: [ColumnType]
     } deriving (Show, Eq)
 
 data Command = Cmd {

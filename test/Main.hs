@@ -2,8 +2,9 @@ module Main (main) where
 import Test.Hspec
 import Parsers ( commandParser, commandParser )
 import Text.Megaparsec (runParser)
-import Types (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference))
+import Types (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation, Update, Delete), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference))
 
+-- TODO: implement double quoted values
 parsersTests :: IO ()
 parsersTests = hspec $ do
     describe "Parsers.commandParser" $ do
@@ -19,15 +20,19 @@ parsersTests = hspec $ do
             runParser commandParser "" "ALTER example5 RENAME COLUMN old TO new;" `shouldBe` Right (Cmd "example5" (Alter (Rename "old" "new")))
         it "SELECT command parsed correclty" $ do
             runParser commandParser "" "SELECT col1, col2 FROM example6;" `shouldBe` Right (Cmd "example6" (Select ["col1", "col2"]))
+        it "UPDATE command parsed correctly (without WHERE)" $ do
+            runParser commandParser "" "UPDATE table SET c1 = v1, c2 = v2;" `shouldBe` Right (Cmd "table" (Update [("c1", "v1"), ("c2", "v2")] Nothing))
+        it "UPDATE command parsed correctly (with WHERE)" $ do
+            runParser commandParser "" "UPDATE table SET c1 = 3, c2 = 9 WHERE c1 > 3;" `shouldBe` Right (Cmd "table" (Update [("c1", "3"), ("c2", "9")] (Greater "c1" "3")))
+        it "DELETE command parsed correctly" $ do
+            runParser commandParser "" "DELETE FROM table WHERE col = \"Hello world\";" `shouldBe` Right (Cmd "table" (Delete (Equal "col" "Hello world")))
         it "UNION command parsed correctly" $ do
             runParser commandParser "" "UNION t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Union))
         it "INTERSECTION command parsed correctly" $ do
-            runParser commandParser "" "INTERSECTION t1, t2 INTO t3" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Intersection))
+            runParser commandParser "" "INTERSECTION t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Intersection))
         it "DIFFERENCE command parsed correctly" $ do
-            runParser commandParser "" "DIFFERENCE t1, t2 INTO t3" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Difference))
-
-
-
+            runParser commandParser "" "DIFFERENCE t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Difference))
+        
 main :: IO ()
 main = do
     parsersTests

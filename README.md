@@ -60,7 +60,6 @@ The WHERE clause is used to extract only those records that fulfill a specific c
 |     >=     | Greater than or equal |
 |     <=     | Less than or equal |
 |     <>     | Not equal. |
-|     BETWEEN| Between a certain range.
 |     IN     | One of the specified values.
 
 #### `DELETE FROM`
