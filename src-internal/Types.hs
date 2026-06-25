@@ -42,6 +42,10 @@ data CommandData =
         secondTable :: FilePath,
         resultTable :: FilePath,
         operation :: SetOperation
+    } |
+
+    Select {
+        columns :: [ColumnType] 
     } deriving (Show, Eq)
 
 data Command = Cmd {

@@ -1,10 +1,8 @@
 module Main (main) where
 import Test.Hspec
-import qualified Parsers (commandParser)
+import Parsers ( commandParser, commandParser )
 import Text.Megaparsec (runParser)
-
-import Parsers (commandParser)
-import Types (Command (Cmd), CommandData (Create, Insert))
+import Types (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference))
 
 parsersTests :: IO ()
 parsersTests = hspec $ do
@@ -14,7 +12,20 @@ parsersTests = hspec $ do
         it "INSERT command parsed correctly" $ do
             runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (Cmd "example2" (Insert ["a", "b", "c"] [["1", "2", "3"], ["4", "5", "6"]] ))
         it "ALTER ADD parsed correctly" $ do
-            runParser commandParser "" ""
+            runParser commandParser "" "ALTER example3 ADD c;" `shouldBe` Right (Cmd "example3" (Alter (Add "c")))
+        it "ALTER DROP parsed correcly" $ do
+            runParser commandParser "" "ALTER example4 DROP COLUMN c2;" `shouldBe` Right (Cmd "example4" (Alter (Drop "c2")))
+        it "ALTER RENAME parsed correctly" $ do
+            runParser commandParser "" "ALTER example5 RENAME COLUMN old TO new;" `shouldBe` Right (Cmd "example5" (Alter (Rename "old" "new")))
+        it "SELECT command parsed correclty" $ do
+            runParser commandParser "" "SELECT col1, col2 FROM example6;" `shouldBe` Right (Cmd "example6" (Select ["col1", "col2"]))
+        it "UNION command parsed correctly" $ do
+            runParser commandParser "" "UNION t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Union))
+        it "INTERSECTION command parsed correctly" $ do
+            runParser commandParser "" "INTERSECTION t1, t2 INTO t3" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Intersection))
+        it "DIFFERENCE command parsed correctly" $ do
+            runParser commandParser "" "DIFFERENCE t1, t2 INTO t3" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Difference))
+
 
 
 main :: IO ()
