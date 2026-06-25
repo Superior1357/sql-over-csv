@@ -1,6 +1,8 @@
 {-#LANGUAGE FlexibleContexts#-}
 module Commands where
 import Data.List (intercalate)
+{-
+
 import qualified DataFrame as D
 import qualified Data.Text as T
 
@@ -15,3 +17,4 @@ insert path columns values = do
       go (column, value) = D.insert (T.pack column) [value]
 
 -- update :: FilePath -> [(String, String)] -> []
+-}
