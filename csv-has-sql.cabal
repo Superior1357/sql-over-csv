@@ -143,4 +143,5 @@ test-suite csv-has-sql-test
     build-depends:
         base ^>=4.18.3.0,
         csv-has-sql:library-internal,
-        hspec ^>=2.11
+        hspec ^>=2.11,
+        megaparsec ^>= 9.7.0,

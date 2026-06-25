@@ -11,9 +11,9 @@ data AlterData = Add { columnName :: ColumnType } |
                  Rename { 
                     currentName :: ColumnType,
                     newName :: ColumnType
-                 } deriving Show
+                 } deriving (Show, Eq)
 
-data SetOperation = Intersection | Union | Difference deriving Show
+data SetOperation = Intersection | Union | Difference deriving (Show, Eq)
 
 data CommandData = 
     Create {
@@ -42,12 +42,12 @@ data CommandData =
         secondTable :: FilePath,
         resultTable :: FilePath,
         operation :: SetOperation
-    } deriving Show
+    } deriving (Show, Eq)
 
 data Command = Cmd {
     csv_name :: FilePath,
     cmd_data :: CommandData
-} deriving Show
+} deriving (Show, Eq)
 
 class Stream a where
     write :: a -> String -> IO ()
