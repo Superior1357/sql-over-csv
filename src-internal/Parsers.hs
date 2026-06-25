@@ -3,7 +3,7 @@ import Commands
 import Data.Void (Void)
 import Text.Megaparsec (Parsec, some, sepBy1, choice, satisfy)
 import Text.Megaparsec.Char (string, space1, char)
-import Types (Command (..), CommandData (..))
+import ParsingTypes (Command (..), CommandData (..))
 import Control.Applicative (many)
 
 type Parser = Parsec Void String

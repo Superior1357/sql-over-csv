@@ -1,7 +1,21 @@
 module LibControl (runCommand) where
 import Parsers (commandParser)
-import Types (Command (..))
+import ParsingTypes (Command (..))
+import DataTypes (GenericTable)
+
 import Text.Megaparsec (runParser)
+
+parseCommand :: String -> Command
+parseCommand = undefined
+
+applyCommand :: GenericTable -> Command -> GenericTable
+applyCommand = undefined
+
+openTable :: FilePath -> GenericTable
+openTable = undefined
+
+saveTable :: GenericTable -> IO ()
+saveTable = undefined
 
 runCommand :: String -> IO ()
 runCommand c = case runParser commandParser "" c of
