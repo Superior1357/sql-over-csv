@@ -81,7 +81,8 @@ inputTests :: Spec
 inputTests = do
     describe "LibControl.openTable" $ do
         it "openTable works" $ do
-            openTable "example1.csv" `shouldBe` exampleTable1
+            table <- openTable "test/example1.csv"
+            table `shouldBe` exampleTable1
 
 main :: IO ()
 main = hspec $ do 
