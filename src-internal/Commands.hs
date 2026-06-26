@@ -1,6 +1,6 @@
 {-#LANGUAGE FlexibleContexts#-}
 module Commands where
-import Data.List (intercalate)
+-- import Data.List (intercalate)
 
 {-
 import qualified DataFrame as D

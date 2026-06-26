@@ -1,5 +1,4 @@
 module Parsers (Command, commandParser) where
-import Commands
 import Data.Void (Void)
 import Text.Megaparsec (Parsec, some, sepBy1, choice, satisfy)
 import Text.Megaparsec.Char (string, space1, char)

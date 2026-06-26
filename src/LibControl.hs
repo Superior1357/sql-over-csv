@@ -1,4 +1,4 @@
-module LibControl (runCommand) where
+module LibControl (runCommand, openTable) where
 import Parsers (commandParser)
 import ParsingTypes (Command (..))
 import DataTypes (GenericTable)

@@ -3,20 +3,19 @@
 module Main (main) where
 import Test.Hspec
 import Parsers ( commandParser )
+import LibControl (openTable)
 
-import Data.Vector (Vector, singleton, fromList)
-import Data.ByteString (ByteString)
+import Data.Vector (singleton, fromList)
 
 import Text.Megaparsec (runParser)
 import ParsingTypes (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation, Update, Delete), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference),
                 WhereCondition (Equal, Greater, NoCondition))
 import DataTypes
-import Data.Vector.Generic (generate)
 
 -- TODO: implement double quoted values
 -- TODO: test all where conditions
-parsersTests :: IO ()
-parsersTests = hspec $ do
+parsersTests :: Spec
+parsersTests = do
     describe "Parsers.commandParser" $ do
         it "CREATE command parsed correctly" $ do
             runParser commandParser "" "CREATE example1 (A,B,C);" `shouldBe` Right (Cmd "example1" (Create ["A", "B", "C"]))
@@ -53,7 +52,7 @@ row1 :: GenericRecord
 row1 = Record $ fromList ["Item1", "3", "$@#i"]
 
 row2 :: GenericRecord
-row2 = Record $ fromList ["\"13\"", "067", "\",ee\""]
+row2 = Record $ fromList ["\"13\"", "67", "\",ee\""]
 
 row3 :: GenericRecord
 row3 = Record $ fromList ["EE", "", "II"]
@@ -67,8 +66,8 @@ exampleTable1 = Table $ fromList [tableHeader, row1, row2]
 exampleTable2 :: GenericTable
 exampleTable2 = Table $ fromList [tableHeader, row1, row2, row3, row4]
 
-commandsTests :: IO ()
-commandsTests = undefined hspec $ do
+commandsTests :: Spec
+commandsTests = do
     describe "DataTypes.applyCommand" $ do
         it "CREATE command applied correctly" $ do
             let cmd = Create ["AAA", "BB", "C"]
@@ -78,6 +77,14 @@ commandsTests = undefined hspec $ do
             let cmd = Insert ["AAA", "C"] [["EE", "II"], ["OO", "LL"]]
             applyCommand exampleTable1 cmd `shouldBe` exampleTable2
 
+inputTests :: Spec
+inputTests = do
+    describe "LibControl.openTable" $ do
+        it "openTable works" $ do
+            openTable "example1.csv" `shouldBe` exampleTable1
+
 main :: IO ()
-main = do
+main = hspec $ do 
     parsersTests
+    commandsTests
+    inputTests

@@ -1,5 +1,4 @@
 module ParsingTypes where
-import Data.Vector (Vector)
 
 type RecordValue = String
 type Column = String
