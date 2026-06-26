@@ -148,4 +148,6 @@ test-suite csv-has-sql-test
         base ^>=4.18.3.0,
         csv-has-sql:library-internal,
         hspec ^>=2.11,
-        megaparsec ^>= 9.7.0
+        megaparsec ^>= 9.7.0,
+        bytestring ^>= 0.11.5.4,
+        vector ^>= 0.13.2.0

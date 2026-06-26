@@ -1,11 +1,20 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main (main) where
 import Test.Hspec
-import Parsers ( commandParser, commandParser )
+import Parsers ( commandParser )
+
+import Data.Vector (Vector, singleton, fromList)
+import Data.ByteString (ByteString)
+
 import Text.Megaparsec (runParser)
-import ParsingTypes (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation, Update, Delete), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference), 
+import ParsingTypes (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation, Update, Delete), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference),
                 WhereCondition (Equal, Greater, NoCondition))
+import DataTypes
+import Data.Vector.Generic (generate)
 
 -- TODO: implement double quoted values
+-- TODO: test all where conditions
 parsersTests :: IO ()
 parsersTests = hspec $ do
     describe "Parsers.commandParser" $ do
@@ -33,6 +42,41 @@ parsersTests = hspec $ do
             runParser commandParser "" "INTERSECTION t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Intersection))
         it "DIFFERENCE command parsed correctly" $ do
             runParser commandParser "" "DIFFERENCE t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Difference))
+
+tableHeader :: GenericRecord
+tableHeader = Record $ fromList ["AAA", "BB", "C"]
+
+onlyHeaderTable :: GenericTable
+onlyHeaderTable = Table (singleton tableHeader)
+
+row1 :: GenericRecord
+row1 = Record $ fromList ["Item1", "3", "$@#i"]
+
+row2 :: GenericRecord
+row2 = Record $ fromList ["\"13\"", "067", "\",ee\""]
+
+row3 :: GenericRecord
+row3 = Record $ fromList ["EE", "", "II"]
+
+row4 :: GenericRecord
+row4 = Record $ fromList ["OO", "", "LL"]
+
+exampleTable1 :: GenericTable
+exampleTable1 = Table $ fromList [tableHeader, row1, row2]
+
+exampleTable2 :: GenericTable
+exampleTable2 = Table $ fromList [tableHeader, row1, row2, row3, row4]
+
+commandsTests :: IO ()
+commandsTests = undefined hspec $ do
+    describe "DataTypes.applyCommand" $ do
+        it "CREATE command applied correctly" $ do
+            let cmd = Create ["AAA", "BB", "C"]
+            applyCommand emptyTable cmd `shouldBe` onlyHeaderTable
+
+        it "INSERT command applied correctly" $ do
+            let cmd = Insert ["AAA", "C"] [["EE", "II"], ["OO", "LL"]]
+            applyCommand exampleTable1 cmd `shouldBe` exampleTable2
 
 main :: IO ()
 main = do

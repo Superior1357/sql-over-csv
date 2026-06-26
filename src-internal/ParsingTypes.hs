@@ -21,7 +21,7 @@ data WhereCondition = Equal Column RecordValue |
                     ] |
                       NoCondition deriving (Show, Eq)
 
-data CsvType = CSVInt (Maybe Int) | CSVString (Maybe String) | CSVBool (Maybe Bool)
+data CsvType = CSVInt (Maybe Int) | CSVString (Maybe String)
 
 data AlterData = Add { columnName :: Column } |
                  Drop { columnName :: Column } |
@@ -39,8 +39,7 @@ data CommandData =
 
     Insert {
         columns :: [Column],
-        records :: [[RecordValue
-    ]]
+        records :: [[RecordValue]]
     } |
 
     Update {
@@ -63,7 +62,7 @@ data CommandData =
         operation :: SetOperation
     } |
 
-    Select {
+        Select {
         columns :: [Column]
     } deriving (Show, Eq)
 

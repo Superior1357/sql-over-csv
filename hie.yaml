@@ -1,5 +1,8 @@
 cradle:
   cabal:
+    - path: "src-internal"
+      component: "csv-has-sql:lib:library-internal"
+
     - path: "src"
       component: "lib:csv-has-sql"
 

@@ -8,9 +8,6 @@ import Text.Megaparsec (runParser)
 parseCommand :: String -> Command
 parseCommand = undefined
 
-applyCommand :: GenericTable -> Command -> GenericTable
-applyCommand = undefined
-
 openTable :: FilePath -> GenericTable
 openTable = undefined
 
