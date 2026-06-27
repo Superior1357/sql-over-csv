@@ -1,9 +1,10 @@
 module Parsers (Command, commandParser) where
 import Data.Void (Void)
 import Text.Megaparsec (Parsec, some, sepBy1, choice, satisfy)
-import Text.Megaparsec.Char (string, space1, char)
-import ParsingTypes (Command (..), CommandData (..))
+import Text.Megaparsec.Char (string, space1, char, space)
+import ParsingTypes
 import Control.Applicative (many)
+import Data.Char (isSpace)
 
 type Parser = Parsec Void String
 
@@ -19,17 +20,37 @@ supportedFilePath = someExcept [' ']
 parseList :: Parser [String]
 parseList = char '(' *> manyExcept [',', '(', ')'] `sepBy1` char ',' <* char ')'
 
+parseWord :: Parser String
+parseWord = many $ satisfy (\c -> (not.isSpace) c && (c /= ';'))
+
+whereParser :: Parser WhereCondition
+whereParser = undefined
+
+parseDictionary :: Parser [(Column, RecordValue)]
+parseDictionary = undefined
+
+alterDataParser :: Parser AlterData
+alterDataParser = undefined
+
 createParser :: Parser CommandData
-createParser = Create <$> parseList <* char ';'
+createParser = Create <$> parseList
 
 alterParser :: Parser CommandData
-alterParser = undefined
+alterParser = Alter <$> choice [
+        string "ADD" >> space1 >> addParser,
+        string "DROP" >> space1 >> string "COLUMN" >> space1 >> dropParser,
+        string "RENAME" >> space1 >> string "COLUMN" >> space1 >> renameParser
+    ]
+    where
+        addParser = Add <$> parseWord
+        dropParser = Drop <$> parseWord
+        renameParser = Rename <$> parseWord <* space1 <* string "TO" <* space1 <*> parseWord
 
 insertParser :: Parser CommandData
-insertParser = Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> parseList `sepBy1` char ',' <* char ';'
+insertParser = Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> parseList `sepBy1` char ','
 
 updateParser :: Parser CommandData
-updateParser = undefined
+updateParser = string "SET" *> space1 *> (Update <$> parseDictionary <* space1 <*> whereParser)
 
 deleteParser :: Parser CommandData
 deleteParser = undefined
@@ -57,6 +78,6 @@ commandParser = choice [
                     string "UNION" >> assembleWith unionParser,
                     string "INTERSECTION" >> assembleWith intersectionParser,
                     string "DIFFERENCE" >> assembleWith differenceParser
-                ]
+                ] <* space <* char ';'
     where
         assembleWith commandDataParser = space1 *> (Cmd <$> supportedFilePath <* space1 <*> commandDataParser)

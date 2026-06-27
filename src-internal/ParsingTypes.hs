@@ -3,7 +3,8 @@ module ParsingTypes where
 type RecordValue = String
 type Column = String
 
-data WhereCondition = Equal Column RecordValue |
+data WhereCondition = Equal Column RecordValue
+                     |
                       Greater Column RecordValue
                      |
                       Less Column RecordValue
@@ -14,10 +15,10 @@ data WhereCondition = Equal Column RecordValue |
                      |
                       NotEqual Column RecordValue
                      |
-                      Between Column [RecordValue
-                    ] |
-                      In Column [RecordValue
-                    ] |
+                      Between Column [RecordValue]
+                     |
+                      In Column [RecordValue]
+                     |
                       NoCondition deriving (Show, Eq)
 
 data CsvType = CSVInt (Maybe Int) | CSVString (Maybe String)

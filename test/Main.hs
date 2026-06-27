@@ -11,6 +11,8 @@ import Text.Megaparsec (runParser)
 import ParsingTypes (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation, Update, Delete), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference),
                 WhereCondition (Equal, Greater, NoCondition))
 import DataTypes
+import Commands (applyCommand)
+import Commands (emptyTable)
 
 -- TODO: implement double quoted values
 -- TODO: test all where conditions

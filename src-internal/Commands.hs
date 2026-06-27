@@ -1,20 +1,19 @@
 {-#LANGUAGE FlexibleContexts#-}
+{-# LANGUAGE RecordWildCards #-}
 module Commands where
--- import Data.List (intercalate)
 
-{-
-import qualified DataFrame as D
+import Data.List (intercalate)
+import DataTypes (GenericTable(..), GenericRecord (Record))
+import ParsingTypes (CommandData (..), Column)
+import Data.Vector (fromList, singleton, empty)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 
-create :: FilePath -> [String] -> IO ()
-create path columns = writeFile path $ intercalate "," columns ++ "\n"
+create :: [Column] -> GenericTable
+create columnNames = Table $ singleton (Record $ fromList $ map (TE.encodeUtf8 . T.pack) columnNames)
 
-insert :: FilePath -> [String] -> [String] -> IO ()
-insert path columns values = do
-    csv <- D.readCsv path
-    D.writeCsv path $ D.fold go (zip columns values) csv
-    where
-      go (column, value) = D.insert (T.pack column) [value]
+applyCommand :: GenericTable -> CommandData -> GenericTable
+applyCommand _ (Create columnNames) = create columnNames
 
--- update :: FilePath -> [(String, String)] -> []
--}
+emptyTable :: GenericTable
+emptyTable = Table empty
