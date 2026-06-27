@@ -6,7 +6,7 @@ import ParsingTypes (CommandData)
 
 newtype GenericRecord = Record (Vector ByteString) deriving (Show, Eq)
 newtype GenericTable = Table (Vector GenericRecord) deriving (Show, Eq)
-
+    
 applyCommand :: GenericTable -> CommandData -> GenericTable
 applyCommand = undefined
 

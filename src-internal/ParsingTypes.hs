@@ -42,8 +42,7 @@ data CommandData =
     } |
 
     Update {
-        valueUpdates :: [(Column, RecordValue
-    )],
+        valueUpdates :: [(Column, RecordValue)],
         condition :: WhereCondition
     } |
 

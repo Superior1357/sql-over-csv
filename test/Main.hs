@@ -45,14 +45,29 @@ parsersTests = do
 tableHeader :: GenericRecord
 tableHeader = Record $ fromList ["AAA", "BB", "C"]
 
+tableHeader2 :: GenericRecord
+tableHeader2 = Record $ fromList ["AAA", "BB", "C", "NewC"]
+
 onlyHeaderTable :: GenericTable
 onlyHeaderTable = Table (singleton tableHeader)
 
 row1 :: GenericRecord
 row1 = Record $ fromList ["Item1", "3", "$@#i"]
 
+row1Extended :: GenericRecord
+row1Extended = Record $ fromList ["Item1", "3", "$@#i", ""]
+
+row1Shortened :: GenericRecord
+row1Shortened = Record $ fromList ["3", "$@#i"]
+
 row2 :: GenericRecord
-row2 = Record $ fromList ["\"13\"", "67", "\",ee\""]
+row2 = Record $ fromList ["\"13\"", "67", ",ee"]
+
+row2Extended :: GenericRecord
+row2Extended = Record $ fromList ["\"13\"", "67", ",ee", ""]
+
+row2Shortened :: GenericRecord
+row2Shortened = Record $ fromList ["67", ",ee"]
 
 row3 :: GenericRecord
 row3 = Record $ fromList ["EE", "", "II"]
@@ -60,12 +75,19 @@ row3 = Record $ fromList ["EE", "", "II"]
 row4 :: GenericRecord
 row4 = Record $ fromList ["OO", "", "LL"]
 
+row5 :: GenericRecord
+row5 = Record $ fromList ["gg", "12", ",ee"]
+
 exampleTable1 :: GenericTable
 exampleTable1 = Table $ fromList [tableHeader, row1, row2]
+
+exampleTable1WithNewC :: GenericTable
+exampleTable1WithNewC = Table $ fromList [tableHeader2, row1Extended, row2Extended]
 
 exampleTable2 :: GenericTable
 exampleTable2 = Table $ fromList [tableHeader, row1, row2, row3, row4]
 
+-- TODO: test all WHERE clauses
 commandsTests :: Spec
 commandsTests = do
     describe "DataTypes.applyCommand" $ do
@@ -77,6 +99,34 @@ commandsTests = do
             let cmd = Insert ["AAA", "C"] [["EE", "II"], ["OO", "LL"]]
             applyCommand exampleTable1 cmd `shouldBe` exampleTable2
 
+        it "UPDATE command applied correctly" $ do
+            let cmd = Update [("AAA", "gg"), ("BB", "12")] (Equal "BB" "67")
+            applyCommand exampleTable1 cmd `shouldBe` Table (fromList [tableHeader, row1, row5])
+
+        it "DELETE command applied correctly" $ do
+            let cmd = Delete (Equal "BB" "")
+            applyCommand exampleTable2 cmd `shouldBe` exampleTable1
+
+        it "ALTER ADD command applied correclty" $ do
+            let cmd = Alter $ Add "NewC"
+            applyCommand exampleTable1 cmd `shouldBe` exampleTable1WithNewC
+
+        it "ALTER DROP command applied correctly" $ do
+            let cmd = Alter $ Drop "NewC"
+            applyCommand exampleTable1WithNewC cmd `shouldBe` exampleTable1
+
+        it "ALTER RENAME command applied correctly" $ do
+            let cmd = Alter $ Rename "AAA" "AAA2"
+            let renamedHeader = Record $ fromList ["AAA2", "BB", "C"]
+            applyCommand exampleTable1 cmd `shouldBe` Table (fromList [renamedHeader, row1, row2])
+        
+        it "SELECT command applied correctly" $ do
+            let cmd = Select ["BB", "C"]
+            let shortHeader = Record $ fromList ["BB", "C"]
+            applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, row1Shortened, row2Shortened])
+
+        -- TODO: make set operations better (and make tests for them)
+
 inputTests :: Spec
 inputTests = do
     describe "LibControl.openTable" $ do
@@ -85,7 +135,7 @@ inputTests = do
             table `shouldBe` exampleTable1
 
 main :: IO ()
-main = hspec $ do 
+main = hspec $ do
     parsersTests
     commandsTests
     inputTests

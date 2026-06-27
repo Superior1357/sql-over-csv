@@ -1,7 +1,7 @@
 module LibControl (runCommand, openTable) where
 import Parsers (commandParser)
 import ParsingTypes (Command (..))
-import DataTypes (GenericTable (Table), GenericRecord (Record), )
+import DataTypes (GenericTable (Table), GenericRecord (Record), applyCommand)
 
 import Text.Megaparsec (runParser)
 import Data.Csv (decode, HasHeader (NoHeader))
@@ -26,6 +26,8 @@ saveTable :: GenericTable -> IO ()
 saveTable = undefined
 
 runCommand :: String -> IO ()
-runCommand c = case runParser commandParser "" c of
-    Left err -> putStrLn $ "Invalid command: " ++ show err
-    Right command -> print command
+runCommand c = do
+    let (Cmd csvPath cmdData) = parseCommand c
+    table <- openTable csvPath
+    let newTable = applyCommand table cmdData 
+    saveTable newTable
