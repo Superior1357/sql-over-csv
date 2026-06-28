@@ -2,17 +2,21 @@
 
 module Main (main) where
 import Test.Hspec
-import Parsers ( commandParser )
+import Parsers ( commandParser, whereParser)
 import LibControl (openTable)
 
 import Data.Vector (singleton, fromList)
 
 import Text.Megaparsec (runParser)
-import ParsingTypes (Command (Cmd), CommandData (Create, Insert, Alter, Select, SetOperation, Update, Delete), AlterData (Add, Drop, Rename), SetOperation (Union, Intersection, Difference),
-                WhereCondition (Equal, Greater, NoCondition))
+import ParsingTypes
+    ( Command(Cmd),
+      CommandData(Create, Insert, Alter, Select, SetOperation, Update,
+                  Delete),
+      AlterData(Add, Drop, Rename),
+      SetOperation(Union, Intersection, Difference),
+      WhereCondition(..))
 import DataTypes
-import Commands (applyCommand)
-import Commands (emptyTable)
+import Commands ( applyCommand, emptyTable )
 
 -- TODO: implement double quoted values
 -- TODO: test all where conditions
@@ -30,7 +34,7 @@ parsersTests = do
         it "ALTER RENAME parsed correctly" $ do
             runParser commandParser "" "ALTER example5 RENAME COLUMN old TO new;" `shouldBe` Right (Cmd "example5" (Alter (Rename "old" "new")))
         it "SELECT command parsed correclty" $ do
-            runParser commandParser "" "SELECT col1, col2 FROM example6;" `shouldBe` Right (Cmd "example6" (Select ["col1", "col2"]))
+            runParser commandParser "" "SELECT (col1,col2) FROM example6;" `shouldBe` Right (Cmd "example6" (Select ["col1", "col2"]))
         it "UPDATE command parsed correctly (without WHERE)" $ do
             runParser commandParser "" "UPDATE table SET c1 = v1, c2 = v2;" `shouldBe` Right (Cmd "table" (Update [("c1", "v1"), ("c2", "v2")] NoCondition))
         it "UPDATE command parsed correctly (with WHERE)" $ do
@@ -43,6 +47,21 @@ parsersTests = do
             runParser commandParser "" "INTERSECTION t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Intersection))
         it "DIFFERENCE command parsed correctly" $ do
             runParser commandParser "" "DIFFERENCE t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Difference))
+
+        it "WHERE > parsed correctly" $ do
+            runParser whereParser "" "WHERE c1 > 45" `shouldBe` Right (Greater "c1" "45")
+        it "WHERE < parsed correctly" $ do
+            runParser whereParser "" "WHERE c1 < 45" `shouldBe` Right (Less "c1" "45")
+        it "WHERE = parsed correctly" $ do
+            runParser whereParser "" "WHERE c1 = 45" `shouldBe` Right (Equal "c1" "45")
+        it "WHERE <> parsed correctly" $ do
+            runParser whereParser "" "WHERE c1 <> 45" `shouldBe` Right (NotEqual "c1" "45")
+        it "WHERE >= parsed correctly" $ do
+            runParser whereParser "" "WHERE c1 >= 45" `shouldBe` Right (GreaterEqual "c1" "45")
+        it "WHERE <= parsed correctly" $ do
+            runParser whereParser "" "WHERE c1 <= 45" `shouldBe` Right (LessEqual "c1" "45")
+        it "WHERE IN parsed correctly" $ do
+            runParser whereParser "" "WHERE c1 IN (45,25,34)" `shouldBe` Right (In "c1" ["45", "25", "34"])
 
 tableHeader :: GenericRecord
 tableHeader = Record $ fromList ["AAA", "BB", "C"]
@@ -121,7 +140,7 @@ commandsTests = do
             let cmd = Alter $ Rename "AAA" "AAA2"
             let renamedHeader = Record $ fromList ["AAA2", "BB", "C"]
             applyCommand exampleTable1 cmd `shouldBe` Table (fromList [renamedHeader, row1, row2])
-        
+
         it "SELECT command applied correctly" $ do
             let cmd = Select ["BB", "C"]
             let shortHeader = Record $ fromList ["BB", "C"]

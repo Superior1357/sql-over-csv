@@ -15,8 +15,6 @@ data WhereCondition = Equal Column RecordValue
                      |
                       NotEqual Column RecordValue
                      |
-                      Between Column [RecordValue]
-                     |
                       In Column [RecordValue]
                      |
                       NoCondition deriving (Show, Eq)

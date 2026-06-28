@@ -87,7 +87,7 @@ ALTER table_name RENAME COLUMN old_column_name TO new_column_name;
 #### SELECT
 Select data from a table.
 ```
-SELECT column1, column2, ...
+SELECT (column1, column2, ...)
 FROM table_name;
 ```
 #### UNION
