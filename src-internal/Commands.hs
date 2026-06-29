@@ -1,4 +1,6 @@
 {-#LANGUAGE FlexibleContexts#-}
+{-#LANGUAGE OverloadedStrings#-}
+
 module Commands where
 
 import Data.List (intercalate)
@@ -32,24 +34,24 @@ create :: [ColumnType] -> CommandTable
 create colNames = Table $ singleton (Record $ fromList colNames)
 
 insert :: CommandTable -> [ColumnType] -> [Record [RecordValueType]] -> CommandTable
-insert (Table recordsV) cols values = let prev@((Record header):records) = (toList recordsV); insertedIn = toList $ V.map (`elem` cols) header in
-        Table $ fromList (prev ++ next insertedIn)
+insert (Table recordsV) cols recs = Table $ recordsV V.++ newValues
     where
-        next addVal = map (\(Record vs) -> makeRecord addVal (fromList $ toStrings vs)) values
-        makeRecord addVal recordV = Record $ fromList $ toByteStrings $ fillAllZip addVal (toList recordV)
+        newValues = V.unfoldr (\rs -> if null rs then Nothing else let r:rss = rs in Just (filledLine r, rss)) recs
+        (Record header) = V.head recordsV
+        filledLine vals = Record $ emptyNewRecordLine V.// howPutValues vals
+        emptyNewRecordLine = V.replicate (V.length header) ""
 
-        fillAllZip (f:fZip) l = if f then let (li:lis) = l in (li:fillAllZip fZip lis)
-                              else "":fillAllZip fZip l
-        fillAllZip [] [] = []
-        fillAllZip _ _ = undefined
+        howPutValues (Record vals) = zip correspondingIndexes vals -- TODO: implement checks whether vals has the same length as correspondingIndexes
+        correspondingIndexes = map fst $ filter (\(_, name) -> name `elem` cols) $ zip [0..] (toList header)
 
+-- TODO: 
 update :: CommandTable -> [(ColumnType, RecordValueType)] -> WhereConditionType -> CommandTable
-update t updates cond = undefined
+update (Table t) updates cond = undefined
 
 applyCommand :: CommandTable -> CommandDataType -> CommandTable
 applyCommand _ (Create colNames) = create colNames
 applyCommand table (Insert colNames rs) = insert table colNames rs
-applyCommand table (Update updates condition) = update table updates condition 
+applyCommand table (Update updates condition) = update table updates condition
 
 emptyTable :: CommandTable
 emptyTable = Table empty
