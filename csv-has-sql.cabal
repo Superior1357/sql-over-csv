@@ -59,7 +59,6 @@ library library-internal
 
     exposed-modules: Parsers, 
                     Commands, 
-                    ParsingTypes,
                     DataTypes
 
     build-depends: base ^>=4.18.3.0,

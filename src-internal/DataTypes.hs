@@ -1,9 +1,69 @@
-module DataTypes (GenericRecord (..), GenericTable (..)) where
+module DataTypes where
 
-import Data.Vector (Vector, empty)
-import Data.ByteString (ByteString)
-import ParsingTypes (CommandData (..)) 
-import Data.Csv (ToRecord)
+newtype Record vs = Record vs deriving (Show, Eq)
+newtype Table rs = Table rs deriving (Show, Eq)
 
-newtype GenericRecord = Record (Vector ByteString) deriving (Show, Eq)
-newtype GenericTable = Table (Vector GenericRecord) deriving (Show, Eq)
+data WhereCondition c v = Equal c v
+                     |
+                      Greater c v
+                     |
+                      Less c v
+                     |
+                      GreaterEqual c v
+                     |
+                      LessEqual c v
+                     |
+                      NotEqual c v
+                     |
+                      In c [v]
+                     |
+                      NoCondition deriving (Show, Eq)
+
+data CsvType = CSVInt (Maybe Int) | CSVString (Maybe String)
+
+data AlterData c = Add { columnName :: c } |
+                 Drop { columnName :: c } |
+                 Rename { 
+                    currentName :: c,
+                    newName :: c
+                 } deriving (Show, Eq)
+
+data SetOperation = Intersection | Union | Difference deriving (Show, Eq)
+
+data (Show c, Show v, Eq c, Eq v) => CommandData c v = 
+    Create {
+        columnNames :: [c]
+    } |
+
+    Insert {
+        columns :: [c],
+        records :: [Record [v]]
+    } |
+
+    Update {
+        valueUpdates :: [(c, v)],
+        condition :: WhereCondition c v
+    } |
+
+    Delete {
+        condition :: WhereCondition c v
+    } |
+
+    Alter {
+        subCommand :: AlterData c
+    } |
+
+    SetOperation {
+        secondTable :: FilePath,
+        resultTable :: FilePath,
+        operation :: SetOperation
+    } |
+
+        Select {
+        columns :: [c]
+    } deriving (Show, Eq)
+
+data (Show d, Eq d) => Command d = Cmd {
+    csv_name :: FilePath,
+    cmd_data :: d
+} deriving (Show, Eq)

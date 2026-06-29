@@ -8,15 +8,8 @@ import LibControl (openTable)
 import Data.Vector (singleton, fromList)
 
 import Text.Megaparsec (runParser)
-import ParsingTypes
-    ( Command(Cmd),
-      CommandData(Create, Insert, Alter, Select, SetOperation, Update,
-                  Delete),
-      AlterData(Add, Drop, Rename),
-      SetOperation(Union, Intersection, Difference),
-      WhereCondition(..))
+import Commands ( applyCommand, emptyTable, CommandTable, RecordType)
 import DataTypes
-import Commands ( applyCommand, emptyTable )
 
 -- TODO: implement double quoted values
 -- TODO: test all where conditions
@@ -26,7 +19,7 @@ parsersTests = do
         it "CREATE command parsed correctly" $ do
             runParser commandParser "" "CREATE example1 (A,B,C);" `shouldBe` Right (Cmd "example1" (Create ["A", "B", "C"]))
         it "INSERT command parsed correctly" $ do
-            runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (Cmd "example2" (Insert ["a", "b", "c"] [["1", "2", "3"], ["4", "5", "6"]] ))
+            runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (Cmd "example2" (Insert ["a", "b", "c"] [Record ["1", "2", "3"], Record ["4", "5", "6"]] ))
         it "ALTER ADD parsed correctly" $ do
             runParser commandParser "" "ALTER example3 ADD c;" `shouldBe` Right (Cmd "example3" (Alter (Add "c")))
         it "ALTER DROP parsed correcly" $ do
@@ -63,49 +56,49 @@ parsersTests = do
         it "WHERE IN parsed correctly" $ do
             runParser whereParser "" "WHERE c1 IN (45,25,34)" `shouldBe` Right (In "c1" ["45", "25", "34"])
 
-tableHeader :: GenericRecord
+tableHeader :: RecordType
 tableHeader = Record $ fromList ["AAA", "BB", "C"]
 
-tableHeader2 :: GenericRecord
+tableHeader2 :: RecordType
 tableHeader2 = Record $ fromList ["AAA", "BB", "C", "NewC"]
 
-onlyHeaderTable :: GenericTable
+onlyHeaderTable :: CommandTable
 onlyHeaderTable = Table (singleton tableHeader)
 
-row1 :: GenericRecord
+row1 :: RecordType
 row1 = Record $ fromList ["Item1", "3", "$@#i"]
 
-row1Extended :: GenericRecord
+row1Extended :: RecordType
 row1Extended = Record $ fromList ["Item1", "3", "$@#i", ""]
 
-row1Shortened :: GenericRecord
+row1Shortened :: RecordType
 row1Shortened = Record $ fromList ["3", "$@#i"]
 
-row2 :: GenericRecord
+row2 :: RecordType
 row2 = Record $ fromList ["\"13\"", "67", ",ee"]
 
-row2Extended :: GenericRecord
+row2Extended :: RecordType
 row2Extended = Record $ fromList ["\"13\"", "67", ",ee", ""]
 
-row2Shortened :: GenericRecord
+row2Shortened :: RecordType
 row2Shortened = Record $ fromList ["67", ",ee"]
 
-row3 :: GenericRecord
+row3 :: RecordType
 row3 = Record $ fromList ["EE", "", "II"]
 
-row4 :: GenericRecord
+row4 :: RecordType
 row4 = Record $ fromList ["OO", "", "LL"]
 
-row5 :: GenericRecord
+row5 :: RecordType
 row5 = Record $ fromList ["gg", "12", ",ee"]
 
-exampleTable1 :: GenericTable
+exampleTable1 :: CommandTable
 exampleTable1 = Table $ fromList [tableHeader, row1, row2]
 
-exampleTable1WithNewC :: GenericTable
+exampleTable1WithNewC :: CommandTable
 exampleTable1WithNewC = Table $ fromList [tableHeader2, row1Extended, row2Extended]
 
-exampleTable2 :: GenericTable
+exampleTable2 :: CommandTable
 exampleTable2 = Table $ fromList [tableHeader, row1, row2, row3, row4]
 
 -- TODO: test all WHERE clauses
@@ -117,7 +110,7 @@ commandsTests = do
             applyCommand emptyTable cmd `shouldBe` onlyHeaderTable
 
         it "INSERT command applied correctly" $ do
-            let cmd = Insert ["AAA", "C"] [["EE", "II"], ["OO", "LL"]]
+            let cmd = Insert ["AAA", "C"] [Record ["EE", "II"], Record ["OO", "LL"]]
             applyCommand exampleTable1 cmd `shouldBe` exampleTable2
 
         it "UPDATE command applied correctly" $ do
