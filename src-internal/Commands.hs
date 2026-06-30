@@ -15,11 +15,11 @@ import Data.ByteString (ByteString)
 type ColumnType = ByteString
 type RecordValueType = ByteString
 type RecordType = Record (V.Vector RecordValueType)
+type Header = RecordType
 
 type CommandDataType = CommandData ColumnType RecordValueType
 type CommandTable = Table (V.Vector RecordType)
-type WhereConditionType = WhereCondition ColumnType RecordValueType
-
+type WhereConditionParsed = WhereCondition ColumnType RecordValueType
 
 toByteStrings :: [String] -> [ByteString]
 toByteStrings = map (TE.encodeUtf8 . T.pack)
@@ -33,6 +33,9 @@ toStrings = map (T.unpack . TE.decodeUtf8)
 create :: [ColumnType] -> CommandTable
 create colNames = Table $ singleton (Record $ fromList colNames)
 
+interpretWhereCondition :: WhereConditionParsed -> Header -> (RecordType -> Bool)
+interpretWhereCondition = undefined
+
 insert :: CommandTable -> [ColumnType] -> [Record [RecordValueType]] -> CommandTable
 insert (Table recordsV) cols recs = Table $ recordsV V.++ newValues
     where
@@ -45,7 +48,7 @@ insert (Table recordsV) cols recs = Table $ recordsV V.++ newValues
         correspondingIndexes = map fst $ filter (\(_, name) -> name `elem` cols) $ zip [0..] (toList header)
 
 -- TODO: 
-update :: CommandTable -> [(ColumnType, RecordValueType)] -> WhereConditionType -> CommandTable
+update :: CommandTable -> [(ColumnType, RecordValueType)] -> WhereConditionParsed -> CommandTable
 update (Table t) updates cond = undefined
 
 applyCommand :: CommandTable -> CommandDataType -> CommandTable

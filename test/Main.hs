@@ -8,7 +8,7 @@ import LibControl (openTable)
 import Data.Vector (singleton, fromList)
 
 import Text.Megaparsec (runParser)
-import Commands ( applyCommand, emptyTable, CommandTable, RecordType)
+import Commands ( applyCommand, emptyTable, CommandTable, RecordType, interpretWhereCondition)
 import DataTypes
 
 -- TODO: implement double quoted values
@@ -138,6 +138,72 @@ commandsTests = do
             let cmd = Select ["BB", "C"]
             let shortHeader = Record $ fromList ["BB", "C"]
             applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, row1Shortened, row2Shortened])
+
+
+
+        it "WHERE Equal True where condition holds" $ do
+            let func = interpretWhereCondition (Equal "AAA" "Item1") tableHeader
+            func row1 `shouldBe` True
+
+        it "WHERE Equal False where condition doesn't hold" $ do
+            let func = interpretWhereCondition (Equal "AAA" "Item1") tableHeader
+            func row2 `shouldBe` False
+        
+        it "WHERE Greater True where condition holds" $ do
+            let func = interpretWhereCondition (Greater "BB" "4") tableHeader
+            func row2 `shouldBe` True
+
+        it "WHERE Greater False where condition doesn't hold" $ do
+            let func = interpretWhereCondition (Greater "BB" "4") tableHeader
+            func row1 `shouldBe` False
+
+        it "WHERE Greater Equal True where condition holds" $ do
+            let func = interpretWhereCondition (GreaterEqual "BB" "67") tableHeader
+            func row2 `shouldBe` True
+
+        it "WHERE Greater Equal False where condition doesn't hold" $ do
+            let func = interpretWhereCondition (GreaterEqual "BB" "67") tableHeader
+            func row1 `shouldBe` False
+
+        it "WHERE Less True where condition holds" $ do
+            let func = interpretWhereCondition (Less "BB" "4") tableHeader
+            func row1 `shouldBe` True
+
+        it "WHERE Less False where condition doesn't hold" $ do
+            let func = interpretWhereCondition (Less "BB" "4") tableHeader
+            func row2 `shouldBe` False
+
+        it "WHERE Less Equal True where condition holds" $ do
+            let func = interpretWhereCondition (LessEqual "BB" "3") tableHeader
+            func row1 `shouldBe` True
+
+        it "WHERE Less Equal False where condition doesn't hold" $ do
+            let func = interpretWhereCondition (LessEqual "BB" "3") tableHeader
+            func row2 `shouldBe` False
+
+        it "WHERE Not Equal True where condition holds" $ do
+            let func = interpretWhereCondition (NotEqual "AAA" "Item1") tableHeader
+            func row2 `shouldBe` True
+
+        it "WHERE Not Equal False where condition doesn't hold" $ do
+            let func = interpretWhereCondition (NotEqual "AAA" "Item1") tableHeader
+            func row1 `shouldBe` False
+
+        it "WHERE In True where condition holds" $ do
+            let func = interpretWhereCondition (In "AAA" ["Item1", "Item2"]) tableHeader
+            func row1 `shouldBe` True
+
+        it "WHERE In False where condition doesn't hold" $ do
+            let func = interpretWhereCondition (In "AAA" ["Item1", "Item2"]) tableHeader
+            func row2 `shouldBe` False
+
+        it "WHERE NoCondition True test1" $ do
+            let func = interpretWhereCondition NoCondition tableHeader
+            func row1 `shouldBe` True
+
+        it "WHERE NoCondition True test2" $ do
+            let func = interpretWhereCondition NoCondition tableHeader
+            func row2 `shouldBe` True
 
         -- TODO: make set operations better (and make tests for them)
 
