@@ -45,7 +45,7 @@ VALUES (value11, value12, value13, ...),
 Update or modify one or more records in the table.
 ```
 UPDATE table_name
-SET column1 = value1, column2 = value2, ...
+SET (column1 = value1, column2 = value2, ...)
 WHERE condition;
 ```
 

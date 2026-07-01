@@ -1,10 +1,12 @@
-module Parsers (Command, commandParser, whereParser, ParsedData, ParsedCommand) where
+module Parsers (Command, commandParser, whereParser, parseWord, ParsedData, ParsedCommand) where
 import Data.Void (Void)
 import Text.Megaparsec (Parsec, some, sepBy1, choice, satisfy)
 import Text.Megaparsec.Char (string, space1, char, space)
 import Control.Applicative (many, (<|>))
 import Data.Char (isSpace)
 import DataTypes
+import Control.Monad (void)
+import Data.Functor (($>))
 
 type Parser = Parsec Void String
 
@@ -14,20 +16,26 @@ type RecordValue = String
 type ParsedData = CommandData Column RecordValue
 type ParsedCommand = Command ParsedData
 
+specialSymbol :: Char -> Bool
+specialSymbol s = isSpace s || s `elem` symbols
+    where
+        symbols = ['"', ',', '(', ')', ';']
+
 someExcept :: [Char] -> Parser String
 someExcept cs = some $ satisfy (`notElem` cs)
-
-manyExcept :: [Char] -> Parser String
-manyExcept cs = many $ satisfy (`notElem` cs)
 
 supportedFilePath :: Parser FilePath
 supportedFilePath = someExcept [' ', ';']
 
 parseList :: Parser [String]
-parseList = char '(' *> manyExcept [',', '(', ')'] `sepBy1` char ',' <* char ')'
+parseList = char '(' *> parseWord `sepBy1` char ',' <* char ')'
 
 parseWord :: Parser String
-parseWord = many $ satisfy (\c -> (not.isSpace) c && (c /= ';'))
+parseWord = (char '"' *> enclosed <* char '"') <|> open
+    where
+        enclosed = many (satisfy (/= '"') <|> concatQuotes)
+        concatQuotes = string "\"\"" $> '"'
+        open = many $ satisfy $ not.specialSymbol
 
 whereParser :: Parser (WhereCondition Column RecordValue)
 whereParser = (string "WHERE" *> space1 *> whereCondition) <|>
@@ -50,9 +58,10 @@ whereParser = (string "WHERE" *> space1 *> whereCondition) <|>
 
         buildWithSecondArg constructor colName = constructor colName <$> (space1 *> parseWord)
 
-
 parseDictionary :: Parser [(Column, RecordValue)]
-parseDictionary = undefined
+parseDictionary = char '(' *> (parsePair `sepBy1` char ',') <* char ')'
+    where
+        parsePair = (,) <$> (parseWord <* space1 <* char '=' <* space1) <*> parseWord
 
 alterDataParser :: Parser (AlterData Column)
 alterDataParser = undefined
@@ -77,7 +86,7 @@ insertParser = Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> r
         recordList = map Record <$> (parseList `sepBy1` char ',')
 
 updateParser :: Parser ParsedData
-updateParser = string "SET" *> space1 *> (Update <$> parseDictionary <* space1 <*> whereParser)
+updateParser = string "SET" *> space1 *> (Update <$> parseDictionary <* space <*> whereParser)
 
 deleteParser :: Parser ParsedData
 deleteParser = Delete <$> whereParser
@@ -105,7 +114,7 @@ commandParser = choice [
                     string "CREATE" *> assembleWith createParser,
                     string "INSERT" *> space1 *> string "INTO" *> assembleWith insertParser,
                     string "UPDATE" *> assembleWith updateParser,
-                    string "DELETE" *> assembleWith deleteParser,
+                    string "DELETE" *> space1 *> string "FROM" *> assembleWith deleteParser,
                     string "ALTER" *> assembleWith alterParser,
                     string "UNION" *> assembleWith unionParser,
                     string "INTERSECTION" *> assembleWith intersectionParser,

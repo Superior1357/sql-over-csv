@@ -2,7 +2,7 @@
 
 module Main (main) where
 import Test.Hspec
-import Parsers ( commandParser, whereParser)
+import Parsers ( commandParser, whereParser, parseWord)
 import LibControl (openTable)
 
 import Data.Vector (singleton, fromList)
@@ -29,9 +29,9 @@ parsersTests = do
         it "SELECT command parsed correclty" $ do
             runParser commandParser "" "SELECT (col1,col2) FROM example6;" `shouldBe` Right (Cmd "example6" (Select ["col1", "col2"]))
         it "UPDATE command parsed correctly (without WHERE)" $ do
-            runParser commandParser "" "UPDATE table SET c1 = v1, c2 = v2;" `shouldBe` Right (Cmd "table" (Update [("c1", "v1"), ("c2", "v2")] NoCondition))
+            runParser commandParser "" "UPDATE table SET (c1 = v1,c2 = v2);" `shouldBe` Right (Cmd "table" (Update [("c1", "v1"), ("c2", "v2")] NoCondition))
         it "UPDATE command parsed correctly (with WHERE)" $ do
-            runParser commandParser "" "UPDATE table SET c1 = 3, c2 = 9 WHERE c1 > 3;" `shouldBe` Right (Cmd "table" (Update [("c1", "3"), ("c2", "9")] (Greater "c1" "3")))
+            runParser commandParser "" "UPDATE table SET (c1 = 3,c2 = 9) WHERE c1 > 3;" `shouldBe` Right (Cmd "table" (Update [("c1", "3"), ("c2", "9")] (Greater "c1" "3")))
         it "DELETE command parsed correctly" $ do
             runParser commandParser "" "DELETE FROM table WHERE col = \"Hello world\";" `shouldBe` Right (Cmd "table" (Delete (Equal "col" "Hello world")))
         it "UNION command parsed correctly" $ do
@@ -55,6 +55,11 @@ parsersTests = do
             runParser whereParser "" "WHERE c1 <= 45" `shouldBe` Right (LessEqual "c1" "45")
         it "WHERE IN parsed correctly" $ do
             runParser whereParser "" "WHERE c1 IN (45,25,34)" `shouldBe` Right (In "c1" ["45", "25", "34"])
+    describe "Parsers.parseWord" $ do
+        it "without double quotes parsed" $ do
+            runParser parseWord "" "hello" `shouldBe` Right "hello"
+        it "with double quotes parsed" $ do
+            runParser parseWord "" "\"hel\"\"l;  o\"" `shouldBe` Right "hel\"l;  o"
 
 tableHeader :: RecordType
 tableHeader = Record $ fromList ["AAA", "BB", "C"]
