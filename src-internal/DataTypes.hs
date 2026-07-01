@@ -30,7 +30,7 @@ data AlterData c = Add { columnName :: c } |
 
 data SetOperation = Intersection | Union | Difference deriving (Show, Eq)
 
-data (Show c, Show v, Eq c, Eq v) => CommandData c v = 
+data (Show c, Show v, Eq c, Eq v, Show t, Eq t) => CommandData c v t = 
     Create {
         columnNames :: [c]
     } |
@@ -54,8 +54,8 @@ data (Show c, Show v, Eq c, Eq v) => CommandData c v =
     } |
 
     SetOperation {
-        secondTable :: FilePath,
-        resultTable :: FilePath,
+        secondTable :: t,
+        resultTable :: t,
         operation :: SetOperation
     } |
 

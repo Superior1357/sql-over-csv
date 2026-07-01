@@ -144,7 +144,29 @@ commandsTests = do
             let shortHeader = Record $ fromList ["BB", "C"]
             applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, row1Shortened, row2Shortened])
 
+        it "INTERSECTION command applied correctly" $ do -- defined loosely
+            let t1 = Table $ fromList [tableHeader, row1, row2, row3]
+            let t2 = Table $ fromList [tableHeader, row1, row3, row4]
+            let t3 = Table $ fromList [tableHeader, row1, row3]
 
+            let cmd = SetOperation t2 t3 Intersection
+            applyCommand t1 cmd `shouldBe` t3
+
+        it "UNION command applied correctly" $ do -- defined loosely
+            let t1 = Table $ fromList [tableHeader, row1, row2, row3]
+            let t2 = Table $ fromList [tableHeader, row1, row3, row4]
+            let t3 = Table $ fromList [tableHeader, row1, row2, row3, row4]
+
+            let cmd = SetOperation t2 t3 Union
+            applyCommand t1 cmd `shouldBe` t3
+
+        it "DIFFERENCE command applied correctly" $ do -- defined loosely
+            let t1 = Table $ fromList [tableHeader, row1, row2, row3]
+            let t2 = Table $ fromList [tableHeader, row1, row3, row4]
+            let t3 = Table $ fromList [tableHeader, row2]
+
+            let cmd = SetOperation t2 t3 Union
+            applyCommand t1 cmd `shouldBe` t3
 
         it "WHERE Equal True where condition holds" $ do
             let func = interpretWhereCondition (Equal "AAA" "Item1") tableHeader
@@ -209,8 +231,6 @@ commandsTests = do
         it "WHERE NoCondition True test2" $ do
             let func = interpretWhereCondition NoCondition tableHeader
             func row2 `shouldBe` True
-
-        -- TODO: make set operations better (and make tests for them)
 
 inputTests :: Spec
 inputTests = do

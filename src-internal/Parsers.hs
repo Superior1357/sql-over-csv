@@ -13,7 +13,7 @@ type Parser = Parsec Void String
 type Column = String
 type RecordValue = String
 
-type ParsedData = CommandData Column RecordValue
+type ParsedData = CommandData Column RecordValue FilePath
 type ParsedCommand = Command ParsedData
 
 specialSymbol :: Char -> Bool

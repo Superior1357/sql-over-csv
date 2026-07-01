@@ -19,7 +19,7 @@ type RecordValueType = ByteString
 type RecordType = Record (V.Vector RecordValueType)
 type Header = RecordType
 
-type CommandDataType = CommandData ColumnType RecordValueType
+type CommandDataType = CommandData ColumnType RecordValueType CommandTable
 type CommandTable = Table (V.Vector RecordType)
 type WhereConditionParsed = WhereCondition ColumnType RecordValueType
 type AlterType = AlterData ColumnType
