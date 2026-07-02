@@ -8,7 +8,7 @@ import LibControl (openTable)
 import Data.Vector (singleton, fromList)
 
 import Text.Megaparsec (runParser)
-import Commands ( applyCommand, emptyTable, CommandTable, RecordType, interpretWhereCondition)
+import Commands ( applyCommand, emptyTable, CommandTable, RecordType, interpretWhereCondition, applyTwoTableCommand)
 import DataTypes
 
 -- TODO: implement double quoted values
@@ -17,30 +17,31 @@ parsersTests :: Spec
 parsersTests = do
     describe "Parsers.commandParser" $ do
         it "CREATE command parsed correctly" $ do
-            runParser commandParser "" "CREATE example1 (A,B,C);" `shouldBe` Right (Cmd "example1" (Create ["A", "B", "C"]))
+            runParser commandParser "" "CREATE example1 (A,B,C);" `shouldBe` Right (OneTableCmd "example1" (Create ["A", "B", "C"]))
         it "INSERT command parsed correctly" $ do
-            runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (Cmd "example2" (Insert ["a", "b", "c"] [Record ["1", "2", "3"], Record ["4", "5", "6"]] ))
+            runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (OneTableCmd "example2" (Insert ["a", "b", "c"] [Record ["1", "2", "3"], Record ["4", "5", "6"]] ))
         it "ALTER ADD parsed correctly" $ do
-            runParser commandParser "" "ALTER example3 ADD c;" `shouldBe` Right (Cmd "example3" (Alter (Add "c")))
+            runParser commandParser "" "ALTER example3 ADD c;" `shouldBe` Right (OneTableCmd "example3" (Alter (Add "c")))
         it "ALTER DROP parsed correcly" $ do
-            runParser commandParser "" "ALTER example4 DROP COLUMN c2;" `shouldBe` Right (Cmd "example4" (Alter (Drop "c2")))
+            runParser commandParser "" "ALTER example4 DROP COLUMN c2;" `shouldBe` Right (OneTableCmd "example4" (Alter (Drop "c2")))
         it "ALTER RENAME parsed correctly" $ do
-            runParser commandParser "" "ALTER example5 RENAME COLUMN old TO new;" `shouldBe` Right (Cmd "example5" (Alter (Rename "old" "new")))
+            runParser commandParser "" "ALTER example5 RENAME COLUMN old TO new;" `shouldBe` Right (OneTableCmd "example5" (Alter (Rename "old" "new")))
         it "SELECT command parsed correclty" $ do
-            runParser commandParser "" "SELECT (col1,col2) FROM example6;" `shouldBe` Right (Cmd "example6" (Select ["col1", "col2"]))
+            runParser commandParser "" "SELECT (col1,col2) FROM example6;" `shouldBe` Right (OneTableCmd "example6" (Select ["col1", "col2"]))
         it "UPDATE command parsed correctly (without WHERE)" $ do
-            runParser commandParser "" "UPDATE table SET (c1 = v1,c2 = v2);" `shouldBe` Right (Cmd "table" (Update [("c1", "v1"), ("c2", "v2")] NoCondition))
+            runParser commandParser "" "UPDATE table SET (c1 = v1,c2 = v2);" `shouldBe` Right (OneTableCmd "table" (Update [("c1", "v1"), ("c2", "v2")] NoCondition))
         it "UPDATE command parsed correctly (with WHERE)" $ do
-            runParser commandParser "" "UPDATE table SET (c1 = 3,c2 = 9) WHERE c1 > 3;" `shouldBe` Right (Cmd "table" (Update [("c1", "3"), ("c2", "9")] (Greater "c1" "3")))
+            runParser commandParser "" "UPDATE table SET (c1 = 3,c2 = 9) WHERE c1 > 3;" `shouldBe` Right (OneTableCmd "table" (Update [("c1", "3"), ("c2", "9")] (Greater "c1" "3")))
         it "DELETE command parsed correctly" $ do
-            runParser commandParser "" "DELETE FROM table WHERE col = \"Hello world\";" `shouldBe` Right (Cmd "table" (Delete (Equal "col" "Hello world")))
+            runParser commandParser "" "DELETE FROM table WHERE col = \"Hello world\";" `shouldBe` Right (OneTableCmd "table" (Delete (Equal "col" "Hello world")))
+        
         it "UNION command parsed correctly" $ do
-            runParser commandParser "" "UNION t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Union))
+            runParser commandParser "" "UNION t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Union)
         it "INTERSECTION command parsed correctly" $ do
-            runParser commandParser "" "INTERSECTION t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Intersection))
+            runParser commandParser "" "INTERSECTION t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Intersection)
         it "DIFFERENCE command parsed correctly" $ do
-            runParser commandParser "" "DIFFERENCE t1, t2 INTO t3;" `shouldBe` Right (Cmd "t1" (SetOperation "t2" "t3" Difference))
-
+            runParser commandParser "" "DIFFERENCE t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Difference)
+        
         it "WHERE > parsed correctly" $ do
             runParser whereParser "" "WHERE c1 > 45" `shouldBe` Right (Greater "c1" "45")
         it "WHERE < parsed correctly" $ do
@@ -143,31 +144,28 @@ commandsTests = do
             let cmd = Select ["BB", "C"]
             let shortHeader = Record $ fromList ["BB", "C"]
             applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, row1Shortened, row2Shortened])
-
+        
         it "INTERSECTION command applied correctly" $ do -- defined loosely
             let t1 = Table $ fromList [tableHeader, row1, row2, row3]
             let t2 = Table $ fromList [tableHeader, row1, row3, row4]
             let t3 = Table $ fromList [tableHeader, row1, row3]
 
-            let cmd = SetOperation t2 t3 Intersection
-            applyCommand t1 cmd `shouldBe` t3
+            applyTwoTableCommand t1 t2 Intersection `shouldBe` t3
 
         it "UNION command applied correctly" $ do -- defined loosely
             let t1 = Table $ fromList [tableHeader, row1, row2, row3]
             let t2 = Table $ fromList [tableHeader, row1, row3, row4]
             let t3 = Table $ fromList [tableHeader, row1, row2, row3, row4]
 
-            let cmd = SetOperation t2 t3 Union
-            applyCommand t1 cmd `shouldBe` t3
+            applyTwoTableCommand t1 t2 Union `shouldBe` t3
 
         it "DIFFERENCE command applied correctly" $ do -- defined loosely
             let t1 = Table $ fromList [tableHeader, row1, row2, row3]
             let t2 = Table $ fromList [tableHeader, row1, row3, row4]
             let t3 = Table $ fromList [tableHeader, row2]
 
-            let cmd = SetOperation t2 t3 Union
-            applyCommand t1 cmd `shouldBe` t3
-
+            applyTwoTableCommand t1 t2 Difference `shouldBe` t3
+        
         it "WHERE Equal True where condition holds" $ do
             let func = interpretWhereCondition (Equal "AAA" "Item1") tableHeader
             func row1 `shouldBe` True

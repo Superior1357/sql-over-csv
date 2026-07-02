@@ -5,7 +5,7 @@ import Text.Megaparsec.Char (string, space1, char, space)
 import Control.Applicative (many, (<|>))
 import Data.Char (isSpace)
 import DataTypes
-import Control.Monad (void)
+
 import Data.Functor (($>))
 
 type Parser = Parsec Void String
@@ -14,7 +14,7 @@ type Column = String
 type RecordValue = String
 
 type ParsedData = CommandData Column RecordValue FilePath
-type ParsedCommand = Command ParsedData
+type ParsedCommand = Command ParsedData SetOperation
 
 specialSymbol :: Char -> Bool
 specialSymbol s = isSpace s || s `elem` symbols
@@ -25,7 +25,7 @@ someExcept :: [Char] -> Parser String
 someExcept cs = some $ satisfy (`notElem` cs)
 
 supportedFilePath :: Parser FilePath
-supportedFilePath = someExcept [' ', ';']
+supportedFilePath = parseWord
 
 parseList :: Parser [String]
 parseList = char '(' *> parseWord `sepBy1` char ',' <* char ')'
@@ -63,33 +63,30 @@ parseDictionary = char '(' *> (parsePair `sepBy1` char ',') <* char ')'
     where
         parsePair = (,) <$> (parseWord <* space1 <* char '=' <* space1) <*> parseWord
 
-alterDataParser :: Parser (AlterData Column)
-alterDataParser = undefined
-
 createParser :: Parser ParsedData
-createParser = Create <$> parseList
+createParser = space1 *> (Create <$> parseList)
 
 alterParser :: Parser ParsedData
-alterParser = Alter <$> choice [
+alterParser = space1 *> (Alter <$> choice [
         string "ADD" >> space1 >> addParser,
         string "DROP" >> space1 >> string "COLUMN" >> space1 >> dropParser,
         string "RENAME" >> space1 >> string "COLUMN" >> space1 >> renameParser
-    ]
+    ])
     where
         addParser = Add <$> parseWord
         dropParser = Drop <$> parseWord
         renameParser = Rename <$> parseWord <* space1 <* string "TO" <* space1 <*> parseWord
 
 insertParser :: Parser ParsedData
-insertParser = Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> recordList
+insertParser = space1 *> (Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> recordList)
     where
         recordList = map Record <$> (parseList `sepBy1` char ',')
 
 updateParser :: Parser ParsedData
-updateParser = string "SET" *> space1 *> (Update <$> parseDictionary <* space <*> whereParser)
+updateParser = space1 *> string "SET" *> space1 *> (Update <$> parseDictionary <* space <*> whereParser)
 
 deleteParser :: Parser ParsedData
-deleteParser = Delete <$> whereParser
+deleteParser = space1 *> (Delete <$> whereParser)
 
 selectParser :: Parser ParsedCommand
 selectParser = do
@@ -98,28 +95,20 @@ selectParser = do
     _ <- string "FROM"
     space1
     tableName <- supportedFilePath
-    pure $ Cmd tableName $ Select colNames
-
-unionParser :: Parser ParsedData
-unionParser = undefined
-
-intersectionParser :: Parser ParsedData
-intersectionParser = undefined
-
-differenceParser :: Parser ParsedData
-differenceParser = undefined
+    pure $ OneTableCmd tableName $ Select colNames
 
 commandParser :: Parser ParsedCommand
 commandParser = choice [
-                    string "CREATE" *> assembleWith createParser,
-                    string "INSERT" *> space1 *> string "INTO" *> assembleWith insertParser,
-                    string "UPDATE" *> assembleWith updateParser,
-                    string "DELETE" *> space1 *> string "FROM" *> assembleWith deleteParser,
-                    string "ALTER" *> assembleWith alterParser,
-                    string "UNION" *> assembleWith unionParser,
-                    string "INTERSECTION" *> assembleWith intersectionParser,
-                    string "DIFFERENCE" *> assembleWith differenceParser,
-                    string "SELECT" *> space1 *> selectParser
+                    string "CREATE" *> assembleOneTableCmd createParser,
+                    string "INSERT" *> space1 *> string "INTO" *> assembleOneTableCmd insertParser,
+                    string "UPDATE" *> assembleOneTableCmd updateParser,
+                    string "DELETE" *> space1 *> string "FROM" *> assembleOneTableCmd deleteParser,
+                    string "ALTER" *> assembleOneTableCmd alterParser,
+                    string "SELECT" *> space1 *> selectParser,
+                    string "UNION" *> assembleTwoTableCmd Union,
+                    string "INTERSECTION" *> assembleTwoTableCmd Intersection,
+                    string "DIFFERENCE" *> assembleTwoTableCmd Difference
                 ] <* space <* char ';'
     where
-        assembleWith commandDataParser = space1 *> (Cmd <$> supportedFilePath <* space1 <*> commandDataParser)
+        assembleOneTableCmd commandDataParser = space1 *> (OneTableCmd <$> supportedFilePath <*> commandDataParser)
+        assembleTwoTableCmd ctor = space1 *> (TwoTableCmd <$> supportedFilePath <*> (char ',' *> space *> parseWord <* space1 <* string "INTO" <* space1) <*> parseWord <*> pure ctor)

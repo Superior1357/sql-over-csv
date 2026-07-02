@@ -4,15 +4,14 @@
 module Commands where
 
 import Data.List (intercalate)
-import DataTypes (Record (..), Table (..), WhereCondition (..), CommandData(..), AlterData (..))
+import DataTypes (Record (..), Table (..), WhereCondition (..), CommandData(..), AlterData (..), SetOperation (..))
 
 import Data.Vector (fromList, singleton, empty, toList)
 import qualified Data.Vector as V
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import Data.Maybe (fromJust)
+import Data.Csv (header)
 
 type ColumnType = ByteString
 type RecordValueType = ByteString
@@ -24,15 +23,6 @@ type CommandTable = Table (V.Vector RecordType)
 type WhereConditionParsed = WhereCondition ColumnType RecordValueType
 type AlterType = AlterData ColumnType
 
-toByteStrings :: [String] -> [ByteString]
-toByteStrings = map (TE.encodeUtf8 . T.pack)
-
-toStringsV :: V.Vector ByteString -> V.Vector String
-toStringsV = V.map (T.unpack . TE.decodeUtf8)
-
-toStrings :: [ByteString] -> [String]
-toStrings = map (T.unpack . TE.decodeUtf8)
-
 create :: [ColumnType] -> CommandTable
 create colNames = Table $ singleton (Record $ fromList colNames)
 
@@ -42,7 +32,7 @@ correspondingIndex (Record header) columnName = fromJust $ V.findIndex (== colum
 whereFunc :: RecordType -> ColumnType -> (RecordValueType -> Bool) -> RecordType -> Bool
 whereFunc header col f (Record values) = f (values V.! conditionColumnIndex)
     where
-        conditionColumnIndex = correspondingIndex header col 
+        conditionColumnIndex = correspondingIndex header col
 
 fIntInterpreted :: RecordValueType -> (Int -> Int -> Bool) -> RecordValueType -> Bool
 fIntInterpreted a f b = f (interpretInt a) (interpretInt b)
@@ -114,7 +104,7 @@ alterAdd table columnName = makeTable newHeader newRecords
     where
         newHeader = Record $ h V.++ V.singleton columnName
         newRecords = V.map (\(Record r) -> Record $ V.snoc r "") recs
-        
+
         (Record h, recs) = divide table
 
 dropAt :: Int -> V.Vector a -> V.Vector a
@@ -139,6 +129,21 @@ applyAlterCommand table (Add colName) = alterAdd table colName
 applyAlterCommand table (Drop colName) = alterDrop table colName
 applyAlterCommand table (Rename current new) = alterRename table current new
 
+applySetOperationCommand :: CommandTable -> CommandTable -> SetOperation -> CommandTable
+applySetOperationCommand t1 t2 op = makeTable header $ case op of
+        Intersection -> recordsIntersection
+        Union -> recordsUnion
+        Difference -> recordsDifference
+    where
+        (header, records1) = divide t1
+        (_, records2) = divide t2
+
+        recordsIntersection = takeSatisfying (`elem` records2) records1
+        recordsUnion = records1 V.++ takeSatisfying (`notElem` records1) records2
+        recordsDifference = takeSatisfying (`notElem` records2) records1
+
+        takeSatisfying f = V.concatMap (\r -> if f r then V.singleton r else V.empty)
+
 applyCommand :: CommandTable -> CommandDataType -> CommandTable
 applyCommand _ (Create colNames) = create colNames
 applyCommand table (Insert colNames rs) = insert table colNames rs
@@ -147,6 +152,8 @@ applyCommand table (Delete condition) = delete table condition
 applyCommand table (Select condition) = select table condition
 applyCommand table (Alter subcommand) = applyAlterCommand table subcommand
 
+applyTwoTableCommand :: CommandTable -> CommandTable -> SetOperation -> CommandTable
+applyTwoTableCommand = applySetOperationCommand
 
 emptyTable :: CommandTable
 emptyTable = Table empty

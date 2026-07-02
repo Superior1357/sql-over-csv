@@ -19,8 +19,6 @@ data WhereCondition c v = Equal c v
                      |
                       NoCondition deriving (Show, Eq)
 
-data CsvType = CSVInt (Maybe Int) | CSVString (Maybe String)
-
 data AlterData c = Add { columnName :: c } |
                  Drop { columnName :: c } |
                  Rename { 
@@ -53,17 +51,19 @@ data (Show c, Show v, Eq c, Eq v, Show t, Eq t) => CommandData c v t =
         subCommand :: AlterData c
     } |
 
-    SetOperation {
-        secondTable :: t,
-        resultTable :: t,
-        operation :: SetOperation
-    } |
-
-        Select {
+    Select {
         columns :: [c]
     } deriving (Show, Eq)
 
-data (Show d, Eq d) => Command d = Cmd {
-    csv_name :: FilePath,
-    cmd_data :: d
-} deriving (Show, Eq)
+data (Show d, Eq d, Show d2, Eq d2) => Command d d2 =
+    OneTableCmd {
+        csv_name :: FilePath,
+        cmd_data :: d
+    } |
+
+    TwoTableCmd {
+        t1_name :: FilePath,
+        t2_name :: FilePath,
+        tr_name :: FilePath,
+        command_data :: d2
+    } deriving (Show, Eq)
