@@ -3,15 +3,13 @@
 
 module Commands where
 
-import Data.List (intercalate)
 import DataTypes (Record (..), Table (..), WhereCondition (..), CommandData(..), AlterData (..), SetOperation (..))
 
-import Data.Vector (fromList, singleton, empty, toList)
+import Data.Vector (fromList, singleton, empty)
 import qualified Data.Vector as V
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import Data.Maybe (fromJust)
-import Data.Csv (header)
 
 type ColumnType = ByteString
 type RecordValueType = ByteString
@@ -27,7 +25,7 @@ create :: [ColumnType] -> CommandTable
 create colNames = Table $ singleton (Record $ fromList colNames)
 
 correspondingIndex :: Header -> ColumnType -> Int -- TODO: what if not present?
-correspondingIndex (Record header) columnName = fromJust $ V.findIndex (== columnName) header
+correspondingIndex (Record header) colName = fromJust $ V.findIndex (== colName) header
 
 whereFunc :: RecordType -> ColumnType -> (RecordValueType -> Bool) -> RecordType -> Bool
 whereFunc header col f (Record values) = f (values V.! conditionColumnIndex)
@@ -75,7 +73,7 @@ colValueToIndexValue header mapping = V.zipWith (\i (_, v) -> (i, v)) (correspon
 insert :: CommandTable -> [ColumnType] -> [Record [RecordValueType]] -> CommandTable
 insert (Table recordsV) cols recs = Table $ recordsV V.++ newValues
     where
-        newValues = V.unfoldr (\rs -> if null rs then Nothing else let r:rss = rs in Just (overwriteRecord emptyNewRecordLine (howPutValues r), rss)) recs
+        newValues = V.unfoldr (\rs -> if null rs then Nothing else Just (overwriteRecord emptyNewRecordLine (howPutValues $ head rs), tail rs)) recs
         h@(Record header) = V.head recordsV
         emptyNewRecordLine = Record $ V.replicate (V.length header) ""
 
@@ -83,15 +81,15 @@ insert (Table recordsV) cols recs = Table $ recordsV V.++ newValues
         indices = correspondingIndices h $ fromList cols
 
 update :: CommandTable -> [(ColumnType, RecordValueType)] -> WhereConditionParsed -> CommandTable
-update t updates cond = makeTable header $ V.map updateRecord recs
+update t updates parsedCond = makeTable header $ V.map updateRecord recs
     where
-        updateRecord r = if condition r then overwriteRecord r (colValueToIndexValue header $ fromList updates) else r
-        (header, recs, condition) = divideWithCond t cond
+        updateRecord r = if cond r then overwriteRecord r (colValueToIndexValue header $ fromList updates) else r
+        (header, recs, cond) = divideWithCond t parsedCond
 
 delete :: CommandTable -> WhereConditionParsed -> CommandTable
-delete table cond = makeTable header $ V.filter (not.condition) recs
+delete table parsedCond = makeTable header $ V.filter (not.cond) recs
     where
-        (header, recs, condition) = divideWithCond table cond
+        (header, recs, cond) = divideWithCond table parsedCond
 
 select :: CommandTable -> [ColumnType] -> CommandTable
 select table cols = makeTable (Record (V.backpermute h indices)) $ V.map (\(Record r) -> Record $ V.backpermute r indices) recs
@@ -100,9 +98,9 @@ select table cols = makeTable (Record (V.backpermute h indices)) $ V.map (\(Reco
         indices = correspondingIndices header $ fromList cols
 
 alterAdd :: CommandTable -> ColumnType -> CommandTable
-alterAdd table columnName = makeTable newHeader newRecords
+alterAdd table colName = makeTable newHeader newRecords
     where
-        newHeader = Record $ h V.++ V.singleton columnName
+        newHeader = Record $ h V.++ V.singleton colName
         newRecords = V.map (\(Record r) -> Record $ V.snoc r "") recs
 
         (Record h, recs) = divide table
@@ -147,9 +145,9 @@ applySetOperationCommand t1 t2 op = makeTable header $ case op of
 applyCommand :: CommandTable -> CommandDataType -> CommandTable
 applyCommand _ (Create colNames) = create colNames
 applyCommand table (Insert colNames rs) = insert table colNames rs
-applyCommand table (Update updates condition) = update table updates condition
-applyCommand table (Delete condition) = delete table condition
-applyCommand table (Select condition) = select table condition
+applyCommand table (Update updates cond) = update table updates cond
+applyCommand table (Delete cond) = delete table cond
+applyCommand table (Select cond) = select table cond
 applyCommand table (Alter subcommand) = applyAlterCommand table subcommand
 
 applyTwoTableCommand :: CommandTable -> CommandTable -> SetOperation -> CommandTable
