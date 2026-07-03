@@ -2,7 +2,7 @@
 
 module Main (main) where
 import Test.Hspec
-import Parsers ( commandParser, whereParser, parseWord)
+import Parsers ( commandParser, whereParser, parseWord, parseList, parseDictionary)
 import LibControl (openTable)
 
 import Data.Vector (singleton, fromList)
@@ -18,7 +18,7 @@ parsersTests = do
     describe "Parsers.commandParser" $ do
         it "CREATE command parsed correctly" $ do
             runParser commandParser "" "CREATE example1 (A,B,C);" `shouldBe` Right (OneTableCmd "example1" (Create ["A", "B", "C"]))
-        it "INSERT command parsed correctly" $ do
+        it "INSERT command parsed correctly" $ do -- TODO: why not make a list from it?
             runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (OneTableCmd "example2" (Insert ["a", "b", "c"] [Record ["1", "2", "3"], Record ["4", "5", "6"]] ))
         it "ALTER ADD parsed correctly" $ do
             runParser commandParser "" "ALTER example3 ADD c;" `shouldBe` Right (OneTableCmd "example3" (Alter (Add "c")))
@@ -56,11 +56,35 @@ parsersTests = do
             runParser whereParser "" "WHERE c1 <= 45" `shouldBe` Right (LessEqual "c1" "45")
         it "WHERE IN parsed correctly" $ do
             runParser whereParser "" "WHERE c1 IN (45,25,34)" `shouldBe` Right (In "c1" ["45", "25", "34"])
+            
     describe "Parsers.parseWord" $ do
         it "without double quotes parsed" $ do
             runParser parseWord "" "hello" `shouldBe` Right "hello"
         it "with double quotes parsed" $ do
             runParser parseWord "" "\"hel\"\"l;  o\"" `shouldBe` Right "hel\"l;  o"
+
+    describe "Parsers.parseList" $ do
+        it "without spaces" $ do
+            runParser parseList "" "(1,2,3)" `shouldBe` Right ["1", "2", "3"]
+        it "with whitespace" $ do
+            runParser parseList "" "( 1,  2,3)" `shouldBe` Right ["1", "2", "3"]
+        it "with whitespace and tabulators" $ do
+            runParser parseList "" "( 1,  2,         3)" `shouldBe` Right ["1", "2", "3"]
+
+        it "empty list" $ do
+            runParser parseList "" "()" `shouldBe` Right []
+        it "empty list - whitespace" $ do
+            runParser parseList "" "(  )" `shouldBe` Right []
+
+    describe "Parsers.parseDictionary" $ do
+        it "without spaces" $ do
+            runParser parseDictionary "" "(c1=v1,c2=v2)" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
+        it "with whitespace" $ do
+            runParser parseDictionary "" "( c1= v1 , c2  =v2)" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
+        it "with whitespace and tabulators" $ do
+            runParser parseDictionary "" "( c1= v1 , c2  =      v2      )" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
+        it "with complex word" $ do
+            runParser parseDictionary "" "( \"a = b\"= v1 , c2  =v2)" `shouldBe` Right [("a = b", "v1"), ("c2", "v2")]
 
 tableHeader :: RecordType
 tableHeader = Record $ fromList ["AAA", "BB", "C"]

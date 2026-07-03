@@ -12,6 +12,8 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString as B
+
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 
@@ -57,15 +59,17 @@ parseCommand cmd = case runParser commandParser "" cmd of
 openTable :: FilePath -> IO CommandTable
 openTable path = do
     csvText <- readCSVFile
-    let Right v = decode NoHeader csvText
+    let strictCsvText = B.fromStrict csvText
+    let Right v = decode NoHeader strictCsvText
 
     let table = Table $ V.map Record v
     pure table
+
     where
         readCSVFile = do
             exists <- doesFileExist path
             if exists then do
-                BL.readFile path
+                B.readFile path
             else
                 pure ""
 
@@ -81,11 +85,18 @@ runCommand :: String -> IO ()
 runCommand c = do
     case parseCommand c of
         (OneTableCmd csvPath parsedData) -> do 
-            table <- openTable csvPath
-            let newTable = applyCommand table $ parsedDataToCmdData parsedData
-            saveTable csvPath newTable
+            resultTable <- getResultTable1 csvPath parsedData
+            saveTable csvPath resultTable
+
         (TwoTableCmd t1_path t2_path tr_path op) -> do
+            resultTable <- getResultTable2 t1_path t2_path op
+            saveTable tr_path resultTable
+    where 
+        getResultTable1 csvPath parsedData = do
+            table <- openTable csvPath
+            pure $ applyCommand table $ parsedDataToCmdData parsedData
+
+        getResultTable2 t1_path t2_path op = do
             t1 <- openTable t1_path
             t2 <- openTable t2_path
-            let newTable = applyTwoTableCommand t1 t2 op
-            saveTable tr_path newTable
+            pure $ applyTwoTableCommand t1 t2 op

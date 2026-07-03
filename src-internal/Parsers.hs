@@ -1,6 +1,6 @@
-module Parsers (Command, commandParser, whereParser, parseWord, ParsedData, ParsedCommand) where
+module Parsers (Command, commandParser, whereParser, parseWord, ParsedData, ParsedCommand, parseList, parseDictionary) where
 import Data.Void (Void)
-import Text.Megaparsec (Parsec, some, sepBy1, choice, satisfy)
+import Text.Megaparsec (Parsec, some, sepBy, sepBy1, choice, satisfy)
 import Text.Megaparsec.Char (string, space1, char, space)
 import Control.Applicative (many, (<|>))
 import Data.Char (isSpace)
@@ -19,23 +19,20 @@ type ParsedCommand = Command ParsedData SetOperation
 specialSymbol :: Char -> Bool
 specialSymbol s = isSpace s || s `elem` symbols
     where
-        symbols = ['"', ',', '(', ')', ';']
-
-someExcept :: [Char] -> Parser String
-someExcept cs = some $ satisfy (`notElem` cs)
+        symbols = ['"', ',', '(', ')', ';', '=']
 
 supportedFilePath :: Parser FilePath
 supportedFilePath = parseWord
 
 parseList :: Parser [String]
-parseList = char '(' *> parseWord `sepBy1` char ',' <* char ')'
+parseList = char '(' *> space *> parseWord `sepBy` (space *> char ',' <* space) <* space <* char ')'
 
 parseWord :: Parser String
 parseWord = (char '"' *> enclosed <* char '"') <|> open
     where
         enclosed = many (satisfy (/= '"') <|> concatQuotes)
         concatQuotes = string "\"\"" $> '"'
-        open = many $ satisfy $ not.specialSymbol
+        open = some $ satisfy $ not.specialSymbol
 
 whereParser :: Parser (WhereCondition Column RecordValue)
 whereParser = (string "WHERE" *> space1 *> whereCondition) <|>
@@ -59,9 +56,9 @@ whereParser = (string "WHERE" *> space1 *> whereCondition) <|>
         buildWithSecondArg constructor colName = constructor colName <$> (space1 *> parseWord)
 
 parseDictionary :: Parser [(Column, RecordValue)]
-parseDictionary = char '(' *> (parsePair `sepBy1` char ',') <* char ')'
+parseDictionary = char '(' *> space *> (parsePair `sepBy` char ',') <* space <* char ')'
     where
-        parsePair = (,) <$> (parseWord <* space1 <* char '=' <* space1) <*> parseWord
+        parsePair = space *> ((,) <$> (parseWord <* space <* char '=' <* space) <*> parseWord) <* space
 
 createParser :: Parser ParsedData
 createParser = space1 *> (Create <$> parseList)
@@ -98,7 +95,7 @@ selectParser = do
     pure $ OneTableCmd tableName $ Select colNames
 
 commandParser :: Parser ParsedCommand
-commandParser = choice [
+commandParser = space *> choice [
                     string "CREATE" *> assembleOneTableCmd createParser,
                     string "INSERT" *> space1 *> string "INTO" *> assembleOneTableCmd insertParser,
                     string "UPDATE" *> assembleOneTableCmd updateParser,
