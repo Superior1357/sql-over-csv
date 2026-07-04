@@ -8,8 +8,9 @@ type ErrorMessage = ByteString
 data CommandException = ColumnNotFoundException ErrorMessage |
                         ColumnNameDuplicatedException ErrorMessage |
                         UnableToInterpretException ErrorMessage |
-                        InvalidArgCountException ErrorMessage | 
-                        HeadersDifferException ErrorMessage deriving (Show, Eq)
+                        InvalidArgCountException ErrorMessage | -- TODO: this is not very descriptive
+                        HeadersDifferException ErrorMessage |
+                        InvalidTableFormatException ErrorMessage deriving (Show, Eq)
 
 instance Exception CommandException
     

@@ -3,8 +3,7 @@
 
 module Commands where
 
-import DataTypes (Record (..), Table (..), WhereCondition (..), CommandData(..), AlterData (..), SetOperation (..))
-
+import DataTypes 
 import Data.Vector (fromList, singleton, empty)
 import qualified Data.Vector as V
 import Data.ByteString (ByteString)
@@ -19,6 +18,9 @@ type Header = RecordType
 
 type CommandDataType = CommandData ColumnType RecordValueType CommandTable
 type CommandTable = Table (V.Vector RecordType)
+
+type OutputCmdData = OutputCommandData ColumnType
+type IOCmdData = IOCommandData ColumnType RecordValueType CommandTable
 type WhereConditionParsed = WhereCondition ColumnType RecordValueType
 type AlterType = AlterData ColumnType
 
@@ -82,7 +84,7 @@ insert (Table recordsV) cols recs = Table $ recordsV V.++ newValues
         h@(Record header) = V.head recordsV
         emptyNewRecordLine = Record $ V.replicate (V.length header) ""
 
-        howPutValues (Record vals) = V.zip indices $ fromList vals -- TODO: implement checks whether vals has the same length as correspondingIndexes
+        howPutValues (Record vals) = V.zip indices $ fromList vals
         indices = correspondingIndices h $ fromList cols
 
 update :: CommandTable -> [(ColumnType, RecordValueType)] -> WhereConditionParsed -> CommandTable
@@ -147,13 +149,15 @@ applySetOperationCommand t1 t2 op = makeTable header $ case op of
 
         takeSatisfying f = V.concatMap (\r -> if f r then V.singleton r else V.empty)
 
-applyCommand :: CommandTable -> CommandDataType -> CommandTable
-applyCommand _ (Create colNames) = create colNames
+applyCommand :: CommandTable -> IOCmdData -> CommandTable
 applyCommand table (Insert colNames rs) = insert table colNames rs
 applyCommand table (Update updates cond) = update table updates cond
 applyCommand table (Delete cond) = delete table cond
 applyCommand table (Select cond) = select table cond
 applyCommand table (Alter subcommand) = applyAlterCommand table subcommand
+
+applyOutputCommand :: OutputCmdData -> CommandTable
+applyOutputCommand = undefined
 
 applyTwoTableCommand :: CommandTable -> CommandTable -> SetOperation -> CommandTable
 applyTwoTableCommand = applySetOperationCommand

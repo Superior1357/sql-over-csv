@@ -1,4 +1,4 @@
-module Parsers (Command, commandParser, whereParser, parseWord, ParsedData, ParsedCommand, parseList, parseDictionary) where
+module Parsers (Command, commandParser, whereParser, parseWord, ParsedData, ParsedIOCmdData, ParsedCommand, parseList, parseDictionary) where
 import Data.Void (Void)
 import Text.Megaparsec (Parsec, some, sepBy, sepBy1, choice, satisfy)
 import Text.Megaparsec.Char (string, space1, char, space)
@@ -12,8 +12,12 @@ type Parser = Parsec Void String
 
 type Column = String
 type RecordValue = String
+type ParseTable = FilePath
 
-type ParsedData = CommandData Column RecordValue FilePath
+type ParsedOutputCmdData = OutputCommandData Column
+type ParsedIOCmdData = IOCommandData Column RecordValue ParseTable
+
+type ParsedData = CommandData Column RecordValue ParseTable
 type ParsedCommand = Command ParsedData SetOperation
 
 specialSymbol :: Char -> Bool
@@ -60,10 +64,10 @@ parseDictionary = char '(' *> space *> (parsePair `sepBy` char ',') <* space <* 
     where
         parsePair = space *> ((,) <$> (parseWord <* space <* char '=' <* space) <*> parseWord) <* space
 
-createParser :: Parser ParsedData
+createParser :: Parser ParsedOutputCmdData
 createParser = space1 *> (Create <$> parseList)
 
-alterParser :: Parser ParsedData
+alterParser :: Parser ParsedIOCmdData
 alterParser = space1 *> (Alter <$> choice [
         string "ADD" >> space1 >> addParser,
         string "DROP" >> space1 >> string "COLUMN" >> space1 >> dropParser,
@@ -74,15 +78,15 @@ alterParser = space1 *> (Alter <$> choice [
         dropParser = Drop <$> parseWord
         renameParser = Rename <$> parseWord <* space1 <* string "TO" <* space1 <*> parseWord
 
-insertParser :: Parser ParsedData
+insertParser :: Parser ParsedIOCmdData
 insertParser = space1 *> (Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> recordList)
     where
         recordList = map Record <$> (parseList `sepBy1` char ',')
 
-updateParser :: Parser ParsedData
+updateParser :: Parser ParsedIOCmdData
 updateParser = space1 *> string "SET" *> space1 *> (Update <$> parseDictionary <* space <*> whereParser)
 
-deleteParser :: Parser ParsedData
+deleteParser :: Parser ParsedIOCmdData
 deleteParser = space1 *> (Delete <$> whereParser)
 
 selectParser :: Parser ParsedCommand
@@ -92,15 +96,15 @@ selectParser = do
     _ <- string "FROM"
     space1
     tableName <- supportedFilePath
-    pure $ OneTableCmd tableName $ Select colNames
+    pure $ OneTableCmd tableName $ IOCmd $ Select colNames
 
 commandParser :: Parser ParsedCommand
 commandParser = space *> choice [
-                    string "CREATE" *> assembleOneTableCmd createParser,
-                    string "INSERT" *> space1 *> string "INTO" *> assembleOneTableCmd insertParser,
-                    string "UPDATE" *> assembleOneTableCmd updateParser,
-                    string "DELETE" *> space1 *> string "FROM" *> assembleOneTableCmd deleteParser,
-                    string "ALTER" *> assembleOneTableCmd alterParser,
+                    string "CREATE" *> assembleOneTableCmd (OutputCmd <$> createParser),
+                    string "INSERT" *> space1 *> string "INTO" *> assembleOneTableCmd (IOCmd <$> insertParser),
+                    string "UPDATE" *> assembleOneTableCmd (IOCmd <$> updateParser),
+                    string "DELETE" *> space1 *> string "FROM" *> assembleOneTableCmd (IOCmd <$> deleteParser),
+                    string "ALTER" *> assembleOneTableCmd (IOCmd <$> alterParser),
                     string "SELECT" *> space1 *> selectParser,
                     string "UNION" *> assembleTwoTableCmd Union,
                     string "INTERSECTION" *> assembleTwoTableCmd Intersection,

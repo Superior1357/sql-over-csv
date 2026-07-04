@@ -3,9 +3,12 @@
 module LibControl (runCommand, openTable, handleException) where
 
 import LibExceptions
-import Parsers (commandParser, ParsedData)
-import Commands (applyCommand, CommandTable, CommandDataType, applyTwoTableCommand)
-import CommandExceptions (CommandException (..))
+import Parsers (commandParser, ParsedIOCmdData)
+import Commands
+    ( applyCommand,
+      CommandTable,
+      applyTwoTableCommand,
+      IOCmdData, applyOutputCommand )
 
 import DataTypes
 
@@ -45,21 +48,23 @@ castAlterData (Add column) = Add $ toByteString column
 castAlterData (Drop column) = Drop $ toByteString column
 castAlterData (Rename old new) = Rename (toByteString old) (toByteString new)
 
-parsedDataToCmdData :: ParsedData -> CommandDataType
-parsedDataToCmdData (Create colNames) = Create $ toByteStrings colNames
-parsedDataToCmdData (Insert cols recs) = Insert (toByteStrings cols) (map (\(Record vs) -> Record $ toByteStrings vs) recs)
-parsedDataToCmdData (Update updates cond) = Update (map (Data.Bifunctor.bimap toByteString toByteString) updates) $ castWhereCondition cond
-parsedDataToCmdData (Delete cond) = Delete $ castWhereCondition cond
-parsedDataToCmdData (Alter subcommand) = Alter $ castAlterData subcommand
-parsedDataToCmdData (Select cols) = Select $ toByteStrings cols
+parsedIODataToCmdData :: ParsedIOCmdData -> IOCmdData
+parsedIODataToCmdData (Insert cols recs) = Insert (toByteStrings cols) (map (\(Record vs) -> Record $ toByteStrings vs) recs)
+parsedIODataToCmdData (Update updates cond) = Update (map (Data.Bifunctor.bimap toByteString toByteString) updates) $ castWhereCondition cond
+parsedIODataToCmdData (Delete cond) = Delete $ castWhereCondition cond
+parsedIODataToCmdData (Alter subcommand) = Alter $ castAlterData subcommand
+parsedIODataToCmdData (Select cols) = Select $ toByteStrings cols
+
+parsedOutputDataToCmdData :: OutputCommandData String -> OutputCommandData ByteString
+parsedOutputDataToCmdData (Create colNames) = Create $ toByteStrings colNames
 
 openTable :: FilePath -> IO CommandTable
 openTable path = do
     csvText <- readCSVFile
     let strictCsvText = B.fromStrict csvText
-    
+
     case decode NoHeader strictCsvText of
-        Right v -> do 
+        Right v -> do
             let table = Table $ V.map Record v
             pure table
 
@@ -77,7 +82,6 @@ saveTable :: FilePath -> CommandTable -> IO ()
 saveTable path (Table t) = do
     let bString = encode $ V.toList stripped
     BL.writeFile path bString
-
     where
         stripped = V.map (\(Record r) -> r) t
 
@@ -86,7 +90,7 @@ runCommand c = do
     case runParser commandParser "" c of
         Right cmd -> go cmd
         Left b -> throw $ ParseException b
-    where 
+    where
         go (OneTableCmd csvPath parsedData) = do
             resultTable <- getResultTable1 csvPath parsedData
             saveTable csvPath resultTable
@@ -96,8 +100,13 @@ runCommand c = do
             saveTable tr_path resultTable
 
         getResultTable1 csvPath parsedData = do
-            table <- openTable csvPath
-            pure $ applyCommand table $ parsedDataToCmdData parsedData
+            case parsedData of
+                (IOCmd cmd) -> do
+                    table <- openTable csvPath
+                    pure $ applyCommand table $ parsedIODataToCmdData cmd
+
+                (OutputCmd cmd) -> pure $ applyOutputCommand $ parsedOutputDataToCmdData cmd
+
 
         getResultTable2 t1_path t2_path op = do
             t1 <- openTable t1_path

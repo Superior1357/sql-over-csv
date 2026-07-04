@@ -28,11 +28,7 @@ data AlterData c = Add { columnName :: c } |
 
 data SetOperation = Intersection | Union | Difference deriving (Show, Eq)
 
-data (Show c, Show v, Eq c, Eq v, Show t, Eq t) => CommandData c v t = 
-    Create {
-        columnNames :: [c]
-    } |
-
+data (Show c, Show v, Eq c, Eq v, Show t, Eq t) => IOCommandData c v t = 
     Insert {
         columns :: [c],
         records :: [Record [v]]
@@ -54,6 +50,13 @@ data (Show c, Show v, Eq c, Eq v, Show t, Eq t) => CommandData c v t =
     Select {
         columns :: [c]
     } deriving (Show, Eq)
+
+newtype (Show c, Eq c) => OutputCommandData c = 
+    Create {
+        columnNames :: [c]
+    } deriving (Eq, Show)
+
+data CommandData c v t = IOCmd (IOCommandData c v t) | OutputCmd (OutputCommandData c) deriving (Show, Eq)
 
 data (Show d, Eq d, Show d2, Eq d2) => Command d d2 =
     OneTableCmd {

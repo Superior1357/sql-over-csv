@@ -12,81 +12,50 @@ import Commands
 import DataTypes
 import CommandExceptions
 import Control.Exception (evaluate)
+import LibExceptions (ApplicationException(IOTableException))
 
--- TODO: implement double quoted values
--- TODO: test all where conditions
 parsersTests :: Spec
 parsersTests = do
     describe "Parsers.commandParser" $ do
-        it "CREATE command parsed correctly" $ do
-            runParser commandParser "" "CREATE example1 (A,B,C);" `shouldBe` Right (OneTableCmd "example1" (Create ["A", "B", "C"]))
-        it "INSERT command parsed correctly" $ do -- TODO: why not make a list from it?
-            runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (OneTableCmd "example2" (Insert ["a", "b", "c"] [Record ["1", "2", "3"], Record ["4", "5", "6"]] ))
-        it "ALTER ADD parsed correctly" $ do
-            runParser commandParser "" "ALTER example3 ADD c;" `shouldBe` Right (OneTableCmd "example3" (Alter (Add "c")))
-        it "ALTER DROP parsed correcly" $ do
-            runParser commandParser "" "ALTER example4 DROP COLUMN c2;" `shouldBe` Right (OneTableCmd "example4" (Alter (Drop "c2")))
-        it "ALTER RENAME parsed correctly" $ do
-            runParser commandParser "" "ALTER example5 RENAME COLUMN old TO new;" `shouldBe` Right (OneTableCmd "example5" (Alter (Rename "old" "new")))
-        it "SELECT command parsed correclty" $ do
-            runParser commandParser "" "SELECT (col1,col2) FROM example6;" `shouldBe` Right (OneTableCmd "example6" (Select ["col1", "col2"]))
-        it "UPDATE command parsed correctly (without WHERE)" $ do
-            runParser commandParser "" "UPDATE table SET (c1 = v1,c2 = v2);" `shouldBe` Right (OneTableCmd "table" (Update [("c1", "v1"), ("c2", "v2")] NoCondition))
-        it "UPDATE command parsed correctly (with WHERE)" $ do
-            runParser commandParser "" "UPDATE table SET (c1 = 3,c2 = 9) WHERE c1 > 3;" `shouldBe` Right (OneTableCmd "table" (Update [("c1", "3"), ("c2", "9")] (Greater "c1" "3")))
-        it "DELETE command parsed correctly" $ do
-            runParser commandParser "" "DELETE FROM table WHERE col = \"Hello world\";" `shouldBe` Right (OneTableCmd "table" (Delete (Equal "col" "Hello world")))
-        
-        it "UNION command parsed correctly" $ do
-            runParser commandParser "" "UNION t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Union)
-        it "INTERSECTION command parsed correctly" $ do
-            runParser commandParser "" "INTERSECTION t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Intersection)
-        it "DIFFERENCE command parsed correctly" $ do
-            runParser commandParser "" "DIFFERENCE t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Difference)
-        
-        it "WHERE > parsed correctly" $ do
-            runParser whereParser "" "WHERE c1 > 45" `shouldBe` Right (Greater "c1" "45")
-        it "WHERE < parsed correctly" $ do
-            runParser whereParser "" "WHERE c1 < 45" `shouldBe` Right (Less "c1" "45")
-        it "WHERE = parsed correctly" $ do
-            runParser whereParser "" "WHERE c1 = 45" `shouldBe` Right (Equal "c1" "45")
-        it "WHERE <> parsed correctly" $ do
-            runParser whereParser "" "WHERE c1 <> 45" `shouldBe` Right (NotEqual "c1" "45")
-        it "WHERE >= parsed correctly" $ do
-            runParser whereParser "" "WHERE c1 >= 45" `shouldBe` Right (GreaterEqual "c1" "45")
-        it "WHERE <= parsed correctly" $ do
-            runParser whereParser "" "WHERE c1 <= 45" `shouldBe` Right (LessEqual "c1" "45")
-        it "WHERE IN parsed correctly" $ do
-            runParser whereParser "" "WHERE c1 IN (45,25,34)" `shouldBe` Right (In "c1" ["45", "25", "34"])
-            
+        it "CREATE command parsed correctly" $ runParser commandParser "" "CREATE example1 (A,B,C);" `shouldBe` Right (OneTableCmd "example1" $ OutputCmd $ Create ["A", "B", "C"])
+        it "INSERT command parsed correctly" $ runParser commandParser "" "INSERT INTO example2 (a,b,c) VALUES (1,2,3),(4,5,6);" `shouldBe` Right (OneTableCmd "example2" $ IOCmd $ Insert ["a", "b", "c"] [Record ["1", "2", "3"], Record ["4", "5", "6"]])
+        it "ALTER ADD parsed correctly" $ runParser commandParser "" "ALTER example3 ADD c;" `shouldBe` Right (OneTableCmd "example3" $ IOCmd $ Alter (Add "c"))
+        it "ALTER DROP parsed correcly" $ runParser commandParser "" "ALTER example4 DROP COLUMN c2;" `shouldBe` Right (OneTableCmd "example4" $ IOCmd $ Alter (Drop "c2"))
+        it "ALTER RENAME parsed correctly" $ runParser commandParser "" "ALTER example5 RENAME COLUMN old TO new;" `shouldBe` Right (OneTableCmd "example5" $ IOCmd $ Alter (Rename "old" "new"))
+        it "SELECT command parsed correclty" $ runParser commandParser "" "SELECT (col1,col2) FROM example6;" `shouldBe` Right (OneTableCmd "example6" $ IOCmd $ Select ["col1", "col2"])
+        it "UPDATE command parsed correctly (without WHERE)" $ runParser commandParser "" "UPDATE table SET (c1 = v1,c2 = v2);" `shouldBe` Right (OneTableCmd "table" $ IOCmd (Update [("c1", "v1"), ("c2", "v2")] NoCondition))
+        it "UPDATE command parsed correctly (with WHERE)" $ runParser commandParser "" "UPDATE table SET (c1 = 3,c2 = 9) WHERE c1 > 3;" `shouldBe` Right (OneTableCmd "table" $ IOCmd (Update [("c1", "3"), ("c2", "9")] (Greater "c1" "3")))
+        it "DELETE command parsed correctly" $ runParser commandParser "" "DELETE FROM table WHERE col = \"Hello world\";" `shouldBe` Right (OneTableCmd "table" $ IOCmd (Delete (Equal "col" "Hello world")))
+
+        it "UNION command parsed correctly" $ runParser commandParser "" "UNION t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Union)
+        it "INTERSECTION command parsed correctly" $ runParser commandParser "" "INTERSECTION t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Intersection)
+        it "DIFFERENCE command parsed correctly" $ runParser commandParser "" "DIFFERENCE t1, t2 INTO t3;" `shouldBe` Right (TwoTableCmd "t1" "t2" "t3" Difference)
+
+        it "WHERE > parsed correctly" $ runParser whereParser "" "WHERE c1 > 45" `shouldBe` Right (Greater "c1" "45")
+        it "WHERE < parsed correctly" $ runParser whereParser "" "WHERE c1 < 45" `shouldBe` Right (Less "c1" "45")
+        it "WHERE = parsed correctly" $ runParser whereParser "" "WHERE c1 = 45" `shouldBe` Right (Equal "c1" "45")
+        it "WHERE <> parsed correctly" $ runParser whereParser "" "WHERE c1 <> 45" `shouldBe` Right (NotEqual "c1" "45")
+        it "WHERE >= parsed correctly" $ runParser whereParser "" "WHERE c1 >= 45" `shouldBe` Right (GreaterEqual "c1" "45")
+        it "WHERE <= parsed correctly" $ runParser whereParser "" "WHERE c1 <= 45" `shouldBe` Right (LessEqual "c1" "45")
+        it "WHERE IN parsed correctly" $ runParser whereParser "" "WHERE c1 IN (45,25,34)" `shouldBe` Right (In "c1" ["45", "25", "34"])
+
     describe "Parsers.parseWord" $ do
-        it "without double quotes parsed" $ do
-            runParser parseWord "" "hello" `shouldBe` Right "hello"
-        it "with double quotes parsed" $ do
-            runParser parseWord "" "\"hel\"\"l;  o\"" `shouldBe` Right "hel\"l;  o"
+        it "without double quotes parsed" $ runParser parseWord "" "hello" `shouldBe` Right "hello"
+        it "with double quotes parsed" $ runParser parseWord "" "\"hel\"\"l;  o\"" `shouldBe` Right "hel\"l;  o"
 
     describe "Parsers.parseList" $ do
-        it "without spaces" $ do
-            runParser parseList "" "(1,2,3)" `shouldBe` Right ["1", "2", "3"]
-        it "with whitespace" $ do
-            runParser parseList "" "( 1,  2,3)" `shouldBe` Right ["1", "2", "3"]
-        it "with whitespace and tabulators" $ do
-            runParser parseList "" "( 1,  2,         3)" `shouldBe` Right ["1", "2", "3"]
+        it "without spaces" $ runParser parseList "" "(1,2,3)" `shouldBe` Right ["1", "2", "3"]
+        it "with whitespace" $ runParser parseList "" "( 1,  2,3)" `shouldBe` Right ["1", "2", "3"]
+        it "with whitespace and tabulators" $ runParser parseList "" "( 1,  2,         3)" `shouldBe` Right ["1", "2", "3"]
 
-        it "empty list" $ do
-            runParser parseList "" "()" `shouldBe` Right []
-        it "empty list - whitespace" $ do
-            runParser parseList "" "(  )" `shouldBe` Right []
+        it "empty list" $ runParser parseList "" "()" `shouldBe` Right []
+        it "empty list - whitespace" $ runParser parseList "" "(  )" `shouldBe` Right []
 
     describe "Parsers.parseDictionary" $ do
-        it "without spaces" $ do
-            runParser parseDictionary "" "(c1=v1,c2=v2)" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
-        it "with whitespace" $ do
-            runParser parseDictionary "" "( c1= v1 , c2  =v2)" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
-        it "with whitespace and tabulators" $ do
-            runParser parseDictionary "" "( c1= v1 , c2  =      v2      )" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
-        it "with complex word" $ do
-            runParser parseDictionary "" "( \"a = b\"= v1 , c2  =v2)" `shouldBe` Right [("a = b", "v1"), ("c2", "v2")]
+        it "without spaces" $ runParser parseDictionary "" "(c1=v1,c2=v2)" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
+        it "with whitespace" $ runParser parseDictionary "" "( c1= v1 , c2  =v2)" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
+        it "with whitespace and tabulators" $ runParser parseDictionary "" "( c1= v1 , c2  =      v2      )" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
+        it "with complex word" $ runParser parseDictionary "" "( \"a = b\"= v1 , c2  =v2)" `shouldBe` Right [("a = b", "v1"), ("c2", "v2")]
 
 tableHeader :: RecordType
 tableHeader = Record $ fromList ["AAA", "BB", "C"]
@@ -133,20 +102,23 @@ exampleTable1WithNewC = Table $ fromList [tableHeader2, row1Extended, row2Extend
 exampleTable2 :: CommandTable
 exampleTable2 = Table $ fromList [tableHeader, row1, row2, row3, row4]
 
--- TODO: all columns and such should be supported in any ordering
 commandsTests :: Spec
 commandsTests = do
-    describe "DataTypes.applyCommand - valid input tests" $ do
-        it "CREATE command applied correctly" $ do
-            let cmd = Create ["AAA", "BB", "C"]
-            applyCommand emptyTable cmd `shouldBe` onlyHeaderTable
-
+    describe "Commands.applyCommand - valid input tests" $ do
         it "INSERT command applied correctly" $ do
             let cmd = Insert ["AAA", "C"] [Record ["EE", "II"], Record ["OO", "LL"]]
             applyCommand exampleTable1 cmd `shouldBe` exampleTable2
 
+        it "INSERT command applied correctly - column order different from header" $ do
+            let cmd = Insert ["C", "AAA"] [Record ["EE", "II"], Record ["OO", "LL"]]
+            applyCommand exampleTable1 cmd `shouldBe` exampleTable2
+
         it "UPDATE command applied correctly" $ do
             let cmd = Update [("AAA", "gg"), ("BB", "12")] (Equal "BB" "67")
+            applyCommand exampleTable1 cmd `shouldBe` Table (fromList [tableHeader, row1, row5])
+
+        it "UPDATE command applied correctly - column order different from header" $ do
+            let cmd = Update [("BB", "12"), ("AAA", "gg")] (Equal "BB" "67")
             applyCommand exampleTable1 cmd `shouldBe` Table (fromList [tableHeader, row1, row5])
 
         it "DELETE command applied correctly" $ do
@@ -170,28 +142,33 @@ commandsTests = do
             let cmd = Select ["BB", "C"]
             let shortHeader = Record $ fromList ["BB", "C"]
             applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, row1Shortened, row2Shortened])
-        
-        it "INTERSECTION command applied correctly" $ do -- defined loosely
+
+        it "SELECT command applied correctly - column order different from header" $ do
+            let cmd = Select ["C", "BB"]
+            let shortHeader = Record $ fromList ["BB", "C"]
+            applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, row1Shortened, row2Shortened])
+
+        it "INTERSECTION command applied correctly" $ do
             let t1 = Table $ fromList [tableHeader, row1, row2, row3]
             let t2 = Table $ fromList [tableHeader, row1, row3, row4]
             let t3 = Table $ fromList [tableHeader, row1, row3]
 
             applyTwoTableCommand t1 t2 Intersection `shouldBe` t3
 
-        it "UNION command applied correctly" $ do -- defined loosely
+        it "UNION command applied correctly" $ do
             let t1 = Table $ fromList [tableHeader, row1, row2, row3]
             let t2 = Table $ fromList [tableHeader, row1, row3, row4]
             let t3 = Table $ fromList [tableHeader, row1, row2, row3, row4]
 
             applyTwoTableCommand t1 t2 Union `shouldBe` t3
 
-        it "DIFFERENCE command applied correctly" $ do -- defined loosely
+        it "DIFFERENCE command applied correctly" $ do
             let t1 = Table $ fromList [tableHeader, row1, row2, row3]
             let t2 = Table $ fromList [tableHeader, row1, row3, row4]
             let t3 = Table $ fromList [tableHeader, row2]
 
             applyTwoTableCommand t1 t2 Difference `shouldBe` t3
-        
+
         it "WHERE Equal True where condition holds" $ do
             let func = interpretWhereCondition (Equal "AAA" "Item1") tableHeader
             func row1 `shouldBe` True
@@ -199,7 +176,7 @@ commandsTests = do
         it "WHERE Equal False where condition doesn't hold" $ do
             let func = interpretWhereCondition (Equal "AAA" "Item1") tableHeader
             func row2 `shouldBe` False
-        
+
         it "WHERE Greater True where condition holds" $ do
             let func = interpretWhereCondition (Greater "BB" "4") tableHeader
             func row2 `shouldBe` True
@@ -256,60 +233,65 @@ commandsTests = do
             let func = interpretWhereCondition NoCondition tableHeader
             func row2 `shouldBe` True
 
-    describe "DataTypes.applyCommand - exceptions tests" $ do
-        it "Commands.correspondingIndex -> ColumnNotFoundException thrown if column index not found" $ do
-            evaluate (correspondingIndex tableHeader "NOT PRESENT") `shouldThrow` (== ColumnNotFoundException "NOT PRESENT")
-        it "Command.fIntInterpreted -> UnableToInterpretException thrown if unable to intepret a field as an Int" $ do
-            evaluate (fIntInterpreted "33" (\a b -> a == 3 || b == 4) "4hello") `shouldThrow` (== UnableToInterpretException "4hello")
+    describe "Commands.applyOutputCommand -> valid input test" $ do
+        it "CREATE command applied correctly" $ do
+            let cmd = Create ["AAA", "BB", "C"]
+            applyOutputCommand cmd `shouldBe` onlyHeaderTable
 
-        it "INSERT command invalid column name - ColumnNotFoundException thrown" $ do
-            evaluate (insert exampleTable1 ["AAA", "nonsense"] [Record ["11", "22"], Record ["AA", "AA"]]) `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "INSERT command invalid inserted VALUES item length - InvalidArgCountException thrown" $ do
-            evaluate (insert exampleTable1 ["AAA", "BB"] [Record ["11", "22"], Record ["11", "22", "33"]]) `shouldThrow` (== InvalidArgCountException "3")
-        it "INSERT command duplicate column name -- ColumnNameDuplicatedException thrown" $ do
-            evaluate (insert exampleTable1 ["AAA", "BB", "AAA"] [Record ["11", "22", "33"], Record ["AA", "AA", "AA"]]) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+    describe "Commands.applyCommand - exceptions tests" $ do
+        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if a record is longer than the header" $ do
+            let wrongTable = Table $ fromList [tableHeader, row1, row2Extended, row1]
+            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "2")
+        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if a record is shorter than the header" $ do
+            let wrongTable = Table $ fromList [tableHeader, row1, row2Shortened, row1]
+            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "2")
+        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if the header contains a column without name" $ do
+            let wrongTable = Table $ fromList [Record (fromList ["OK", "", "OK"]), row1, row1, row1]
+            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "0")
+        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if header empty" $ do
+            let wrongTable = Table $ fromList [Record (fromList []), row1, row1, row1]
+            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "0")
 
-        it "UPDATE command invalid column name - ColumnNotFoundException thrown" $ do
-            evaluate (update exampleTable1 [("AAA", "1"), ("nonsense", "2")] NoCondition) `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "UPDATE command duplicate column name -- ColumnNameDuplicatedException thrown" $ do
-            evaluate (update exampleTable1 [("AAA", "1"), ("AAA", "3"), ("BB", "2")] NoCondition) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+        it "Commands.correspondingIndex -> ColumnNotFoundException thrown if column index not found" $ evaluate (correspondingIndex tableHeader "NOT PRESENT") `shouldThrow` (== ColumnNotFoundException "NOT PRESENT")
+        it "Command.fIntInterpreted -> UnableToInterpretException thrown if unable to intepret a field as an Int" $ evaluate (fIntInterpreted "33" (\a b -> a == 3 || b == 4) "4hello") `shouldThrow` (== UnableToInterpretException "4hello")
 
-        it "ALTER DROP command invalid column name - ColumnNotFoundException thrown" $ do
-            evaluate (alterDrop exampleTable1 "nonsense") `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "ALTER RENAME command invalid column name - ColumnNotFoundException thrown" $ do
-            evaluate (alterRename exampleTable1 "nonsense" "not necessary") `shouldThrow` (== ColumnNotFoundException "nonsense")
-        
-        it "SELECT command invalid column name - ColumnNotFoundException thrown" $ do
-            evaluate (select exampleTable1 ["AAA", "nonsense"])  `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "SELECT command duplicate column name -- ColumnNameDuplicatedException thrown" $ do
-            evaluate (select exampleTable1 ["AAA", "BB", "AAA"]) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+        it "INSERT command invalid column name - ColumnNotFoundException thrown" $ evaluate (insert exampleTable1 ["AAA", "nonsense"] [Record ["11", "22"], Record ["AA", "AA"]]) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "INSERT command invalid inserted VALUES item length - InvalidArgCountException thrown" $ evaluate (insert exampleTable1 ["AAA", "BB"] [Record ["11", "22"], Record ["11", "22", "33"]]) `shouldThrow` (== InvalidArgCountException "3")
+        it "INSERT command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (insert exampleTable1 ["AAA", "BB", "AAA"] [Record ["11", "22", "33"], Record ["AA", "AA", "AA"]]) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
 
-        it "UNION command tables headers differ - HeaderDifferException thrown" $ do
-            evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Union) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
-        it "INTERSECTION command tables headers differ - HeaderDifferException thrown" $ do
-            evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Intersection) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
-        it "DIFFERENCE command tables headers differ - HeaderDifferException thrown" $ do
-            evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Difference) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
+        it "UPDATE command invalid column name - ColumnNotFoundException thrown" $ evaluate (update exampleTable1 [("AAA", "1"), ("nonsense", "2")] NoCondition) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "UPDATE command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (update exampleTable1 [("AAA", "1"), ("AAA", "3"), ("BB", "2")] NoCondition) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
 
-        it "whereFunc -> ColumnNotFoundException thrown if column from WHERE clause not present" $ do
-            evaluate (whereFunc tableHeader "nonsense" (const True)) `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "interpretWhereCondition = -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ do
-            evaluate (interpretWhereCondition (Equal "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition > -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ do
-            evaluate (interpretWhereCondition (Greater "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition < -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ do
-            evaluate (interpretWhereCondition (Less "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition >= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ do
-            evaluate (interpretWhereCondition (GreaterEqual "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition <= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ do
-            evaluate (interpretWhereCondition (LessEqual "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
+        it "ALTER DROP command invalid column name - ColumnNotFoundException thrown" $ evaluate (alterDrop exampleTable1 "nonsense") `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "ALTER RENAME command invalid column name - ColumnNotFoundException thrown" $ evaluate (alterRename exampleTable1 "nonsense" "not necessary") `shouldThrow` (== ColumnNotFoundException "nonsense")
+
+        it "SELECT command invalid column name - ColumnNotFoundException thrown" $ evaluate (select exampleTable1 ["AAA", "nonsense"])  `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "SELECT command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (select exampleTable1 ["AAA", "BB", "AAA"]) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+
+        it "UNION command tables headers differ - HeaderDifferException thrown" $ evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Union) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
+        it "INTERSECTION command tables headers differ - HeaderDifferException thrown" $ evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Intersection) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
+        it "DIFFERENCE command tables headers differ - HeaderDifferException thrown" $ evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Difference) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
+
+        it "whereFunc -> ColumnNotFoundException thrown if column from WHERE clause not present" $ evaluate (whereFunc tableHeader "nonsense" (const True)) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "interpretWhereCondition = -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (Equal "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
+        it "interpretWhereCondition > -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (Greater "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
+        it "interpretWhereCondition < -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (Less "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
+        it "interpretWhereCondition >= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (GreaterEqual "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
+        it "interpretWhereCondition <= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (LessEqual "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
+    
+    describe "Commands.applyOutputCommand -> exceptions tests" $ do
+        it "CREATE command applied correctly" $ do
+            let cmd = Create []
+            evaluate (applyOutputCommand cmd) `shouldThrow` (== InvalidArgCountException "0")
 
 inputTests :: Spec
-inputTests = do
-    describe "LibControl.openTable" $ do
-        it "openTable works" $ do
-            table <- openTable "test/example1.csv"
-            table `shouldBe` exampleTable1
+inputTests = describe "LibControl.openTable"  $ do
+                it "openTable opens when file valid" $ do
+                    table <- openTable "test/example1.csv"
+                    table `shouldBe` exampleTable1
+                    
+                it "openTable throws an exception when unable to open file" $ do
+                    openTable "nonexistent" `shouldThrow` (== IOTableException "nonexistent")
 
 main :: IO ()
 main = hspec $ do
