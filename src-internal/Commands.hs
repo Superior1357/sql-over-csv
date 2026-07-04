@@ -9,7 +9,8 @@ import Data.Vector (fromList, singleton, empty)
 import qualified Data.Vector as V
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
-import Data.Maybe (fromJust)
+import CommandExceptions (CommandException(ColumnNotFoundException, UnableToInterpretException))
+import Control.Exception (throw)
 
 type ColumnType = ByteString
 type RecordValueType = ByteString
@@ -24,10 +25,12 @@ type AlterType = AlterData ColumnType
 create :: [ColumnType] -> CommandTable
 create colNames = Table $ singleton (Record $ fromList colNames)
 
-correspondingIndex :: Header -> ColumnType -> Int -- TODO: what if not present?
-correspondingIndex (Record header) colName = fromJust $ V.findIndex (== colName) header
+correspondingIndex :: Header -> ColumnType -> Int
+correspondingIndex (Record header) colName = case V.findIndex (== colName) header of
+    Just i -> i
+    Nothing -> throw $ ColumnNotFoundException colName
 
-whereFunc :: RecordType -> ColumnType -> (RecordValueType -> Bool) -> RecordType -> Bool
+whereFunc :: Header -> ColumnType -> (RecordValueType -> Bool) -> RecordType -> Bool
 whereFunc header col f (Record values) = f (values V.! conditionColumnIndex)
     where
         conditionColumnIndex = correspondingIndex header col
@@ -35,7 +38,9 @@ whereFunc header col f (Record values) = f (values V.! conditionColumnIndex)
 fIntInterpreted :: RecordValueType -> (Int -> Int -> Bool) -> RecordValueType -> Bool
 fIntInterpreted a f b = f (interpretInt a) (interpretInt b)
     where
-        interpretInt i = fst $ fromJust $ B8.readInt i
+        interpretInt i = case B8.readInt i of
+            Just (v, "") -> v
+            _ -> throw $ UnableToInterpretException i
 
 interpretWhereCondition :: WhereConditionParsed -> Header -> (RecordType -> Bool)
 interpretWhereCondition NoCondition _ = const True
@@ -63,7 +68,7 @@ divideWithCond t cond = (header, rs, conditionInterpreted)
         (header, rs) = divide t
 
 correspondingIndices :: Header -> V.Vector ColumnType -> V.Vector Int
-correspondingIndices (Record header) cols = V.findIndices (`elem` cols) header
+correspondingIndices header = V.map (correspondingIndex header)
 
 colValueToIndexValue :: Header -> V.Vector (ColumnType, RecordValueType) -> V.Vector (Int, RecordValueType)
 colValueToIndexValue header mapping = V.zipWith (\i (_, v) -> (i, v)) (correspondingIndices header cols) mapping

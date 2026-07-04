@@ -5,6 +5,8 @@ module LibControl (runCommand, openTable, handleException) where
 import LibExceptions
 import Parsers (commandParser, ParsedData)
 import Commands (applyCommand, CommandTable, CommandDataType, applyTwoTableCommand)
+import CommandExceptions (CommandException (..))
+
 import DataTypes
 
 import Text.Megaparsec (runParser, errorBundlePretty)
