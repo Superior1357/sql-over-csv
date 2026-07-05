@@ -3,13 +3,14 @@
 
 module Commands where
 
-import DataTypes 
+import DataTypes
 import Data.Vector (fromList, singleton, empty)
 import qualified Data.Vector as V
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, toStrict)
 import qualified Data.ByteString.Char8 as B8
-import CommandExceptions (CommandException(ColumnNotFoundException, UnableToInterpretException))
+import CommandExceptions (CommandException(..))
 import Control.Exception (throw)
+import Data.ByteString.Builder (intDec, toLazyByteString)
 
 type ColumnType = ByteString
 type RecordValueType = ByteString
@@ -149,15 +150,32 @@ applySetOperationCommand t1 t2 op = makeTable header $ case op of
 
         takeSatisfying f = V.concatMap (\r -> if f r then V.singleton r else V.empty)
 
+checkTable :: CommandTable -> Maybe CommandException
+checkTable tab@(Table t) = if tableEmpty then Just $ InvalidTableFormatException "0" else
+                       let (Record header, recs) = divide tab; colCount = V.length header in
+                        (if (colCount == 0) || V.any (== "") header then Just $ InvalidTableFormatException "0" else
+                        tryGetFirstRecordOfUnMatchingSize colCount recs)
+    where
+        tableEmpty = V.length t == 0
+        tryGetFirstRecordOfUnMatchingSize size recs = case dropWhile (\(_, Record r) -> V.length r == size) $ zip [1..] (V.toList recs) of
+            [] -> Nothing
+            ((i, _):_) -> Just $ InvalidTableFormatException $ toStrict $ toLazyByteString $ intDec i
+
 applyCommand :: CommandTable -> IOCmdData -> CommandTable
-applyCommand table (Insert colNames rs) = insert table colNames rs
-applyCommand table (Update updates cond) = update table updates cond
-applyCommand table (Delete cond) = delete table cond
-applyCommand table (Select cond) = select table cond
-applyCommand table (Alter subcommand) = applyAlterCommand table subcommand
+applyCommand tableUnsafe = case checkTable tableUnsafe of
+    Nothing -> go tableUnsafe
+    Just err@(InvalidTableFormatException _) -> throw err
+    _ -> undefined
+
+    where
+        go table (Insert colNames rs) = insert table colNames rs
+        go table (Update updates cond) = update table updates cond
+        go table (Delete cond) = delete table cond
+        go table (Select cond) = select table cond
+        go table (Alter subcommand) = applyAlterCommand table subcommand
 
 applyOutputCommand :: OutputCmdData -> CommandTable
-applyOutputCommand = undefined
+applyOutputCommand (Create colNames) = create colNames
 
 applyTwoTableCommand :: CommandTable -> CommandTable -> SetOperation -> CommandTable
 applyTwoTableCommand = applySetOperationCommand

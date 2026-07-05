@@ -57,6 +57,9 @@ parsersTests = do
         it "with whitespace and tabulators" $ runParser parseDictionary "" "( c1= v1 , c2  =      v2      )" `shouldBe` Right [("c1", "v1"), ("c2", "v2")]
         it "with complex word" $ runParser parseDictionary "" "( \"a = b\"= v1 , c2  =v2)" `shouldBe` Right [("a = b", "v1"), ("c2", "v2")]
 
+force :: (Show a) => a -> Int 
+force = length.show
+
 tableHeader :: RecordType
 tableHeader = Record $ fromList ["AAA", "BB", "C"]
 
@@ -77,6 +80,9 @@ row1Shortened = Record $ fromList ["3", "$@#i"]
 
 row2 :: RecordType
 row2 = Record $ fromList ["\"13\"", "67", ",ee"]
+
+rowNumbersOnly :: RecordType
+rowNumbersOnly = Record $ fromList ["11", "22", "33"]
 
 row2Extended :: RecordType
 row2Extended = Record $ fromList ["\"13\"", "67", ",ee", ""]
@@ -110,7 +116,7 @@ commandsTests = do
             applyCommand exampleTable1 cmd `shouldBe` exampleTable2
 
         it "INSERT command applied correctly - column order different from header" $ do
-            let cmd = Insert ["C", "AAA"] [Record ["EE", "II"], Record ["OO", "LL"]]
+            let cmd = Insert ["C", "AAA"] [Record ["II", "EE"], Record ["LL", "OO"]]
             applyCommand exampleTable1 cmd `shouldBe` exampleTable2
 
         it "UPDATE command applied correctly" $ do
@@ -241,55 +247,54 @@ commandsTests = do
     describe "Commands.applyCommand - exceptions tests" $ do
         it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if a record is longer than the header" $ do
             let wrongTable = Table $ fromList [tableHeader, row1, row2Extended, row1]
-            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "2")
+            evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "2")
         it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if a record is shorter than the header" $ do
             let wrongTable = Table $ fromList [tableHeader, row1, row2Shortened, row1]
-            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "2")
+            evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "2")
         it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if the header contains a column without name" $ do
             let wrongTable = Table $ fromList [Record (fromList ["OK", "", "OK"]), row1, row1, row1]
-            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "0")
+            evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "0")
         it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if header empty" $ do
             let wrongTable = Table $ fromList [Record (fromList []), row1, row1, row1]
-            evaluate (applyCommand wrongTable (Delete NoCondition)) `shouldThrow` (== InvalidTableFormatException "0")
+            evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "0")
 
-        it "Commands.correspondingIndex -> ColumnNotFoundException thrown if column index not found" $ evaluate (correspondingIndex tableHeader "NOT PRESENT") `shouldThrow` (== ColumnNotFoundException "NOT PRESENT")
-        it "Command.fIntInterpreted -> UnableToInterpretException thrown if unable to intepret a field as an Int" $ evaluate (fIntInterpreted "33" (\a b -> a == 3 || b == 4) "4hello") `shouldThrow` (== UnableToInterpretException "4hello")
+        it "Commands.correspondingIndex -> ColumnNotFoundException thrown if column index not found" $ evaluate (force (force (correspondingIndex tableHeader "NOT PRESENT"))) `shouldThrow` (== ColumnNotFoundException "NOT PRESENT")
+        it "Command.fIntInterpreted -> UnableToInterpretException thrown if unable to intepret a field as an Int" $ evaluate (force (fIntInterpreted "33" (\a b -> a == 3 || b == 4) "4hello")) `shouldThrow` (== UnableToInterpretException "4hello")
 
-        it "INSERT command invalid column name - ColumnNotFoundException thrown" $ evaluate (insert exampleTable1 ["AAA", "nonsense"] [Record ["11", "22"], Record ["AA", "AA"]]) `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "INSERT command invalid inserted VALUES item length - InvalidArgCountException thrown" $ evaluate (insert exampleTable1 ["AAA", "BB"] [Record ["11", "22"], Record ["11", "22", "33"]]) `shouldThrow` (== InvalidArgCountException "3")
-        it "INSERT command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (insert exampleTable1 ["AAA", "BB", "AAA"] [Record ["11", "22", "33"], Record ["AA", "AA", "AA"]]) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+        it "INSERT command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (insert exampleTable1 ["AAA", "nonsense"] [Record ["11", "22"], Record ["AA", "AA"]])) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "INSERT command invalid inserted VALUES item length - InvalidArgCountException thrown" $ evaluate (force (insert exampleTable1 ["AAA", "BB"] [Record ["11", "22"], Record ["11", "22", "33"]])) `shouldThrow` (== InvalidArgCountException "3")
+        it "INSERT command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (force (insert exampleTable1 ["AAA", "BB", "AAA"] [Record ["11", "22", "33"], Record ["AA", "AA", "AA"]])) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
 
-        it "UPDATE command invalid column name - ColumnNotFoundException thrown" $ evaluate (update exampleTable1 [("AAA", "1"), ("nonsense", "2")] NoCondition) `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "UPDATE command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (update exampleTable1 [("AAA", "1"), ("AAA", "3"), ("BB", "2")] NoCondition) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+        it "UPDATE command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (update exampleTable1 [("AAA", "1"), ("nonsense", "2")] NoCondition)) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "UPDATE command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (force (update exampleTable1 [("AAA", "1"), ("AAA", "3"), ("BB", "2")] NoCondition)) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
 
-        it "ALTER DROP command invalid column name - ColumnNotFoundException thrown" $ evaluate (alterDrop exampleTable1 "nonsense") `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "ALTER RENAME command invalid column name - ColumnNotFoundException thrown" $ evaluate (alterRename exampleTable1 "nonsense" "not necessary") `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "ALTER DROP command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (alterDrop exampleTable1 "nonsense")) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "ALTER RENAME command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (alterRename exampleTable1 "nonsense" "not necessary")) `shouldThrow` (== ColumnNotFoundException "nonsense")
 
-        it "SELECT command invalid column name - ColumnNotFoundException thrown" $ evaluate (select exampleTable1 ["AAA", "nonsense"])  `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "SELECT command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (select exampleTable1 ["AAA", "BB", "AAA"]) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+        it "SELECT command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (select exampleTable1 ["AAA", "nonsense"]))  `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "SELECT command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (force (select exampleTable1 ["AAA", "BB", "AAA"])) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
 
-        it "UNION command tables headers differ - HeaderDifferException thrown" $ evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Union) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
-        it "INTERSECTION command tables headers differ - HeaderDifferException thrown" $ evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Intersection) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
-        it "DIFFERENCE command tables headers differ - HeaderDifferException thrown" $ evaluate (applySetOperationCommand exampleTable1 exampleTable1WithNewC Difference) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
+        it "UNION command tables headers differ - HeaderDifferException thrown" $ evaluate (force (applySetOperationCommand exampleTable1 exampleTable1WithNewC Union)) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
+        it "INTERSECTION command tables headers differ - HeaderDifferException thrown" $ evaluate (force (applySetOperationCommand exampleTable1 exampleTable1WithNewC Intersection)) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
+        it "DIFFERENCE command tables headers differ - HeaderDifferException thrown" $ evaluate (force (applySetOperationCommand exampleTable1 exampleTable1WithNewC Difference)) `shouldThrow` (\m -> m == HeadersDifferException "" || m == HeadersDifferException "NewC")
 
-        it "whereFunc -> ColumnNotFoundException thrown if column from WHERE clause not present" $ evaluate (whereFunc tableHeader "nonsense" (const True)) `shouldThrow` (== ColumnNotFoundException "nonsense")
-        it "interpretWhereCondition = -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (Equal "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition > -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (Greater "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition < -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (Less "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition >= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (GreaterEqual "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-        it "interpretWhereCondition <= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (interpretWhereCondition (LessEqual "AAA" "1H") tableHeader) `shouldThrow` (== UnableToInterpretException "1H")
-    
+        it "whereFunc -> ColumnNotFoundException thrown if column from WHERE clause not present" $ evaluate (force (whereFunc tableHeader "nonsense" (== "") rowNumbersOnly)) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "interpretWhereCondition > -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (force (interpretWhereCondition (Greater "AAA" "1H") tableHeader rowNumbersOnly)) `shouldThrow` (== UnableToInterpretException "1H")
+        it "interpretWhereCondition < -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (force (interpretWhereCondition (Less "AAA" "1H") tableHeader rowNumbersOnly)) `shouldThrow` (== UnableToInterpretException "1H")
+        it "interpretWhereCondition >= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (force (interpretWhereCondition (GreaterEqual "AAA" "1H") tableHeader rowNumbersOnly)) `shouldThrow` (== UnableToInterpretException "1H")
+        it "interpretWhereCondition <= -> UnableToInterpretException thrown if unable to intepret argument as an Int" $ evaluate (force (interpretWhereCondition (LessEqual "AAA" "1H") tableHeader rowNumbersOnly)) `shouldThrow` (== UnableToInterpretException "1H")
+
     describe "Commands.applyOutputCommand -> exceptions tests" $ do
-        it "CREATE command applied correctly" $ do
+        it "CREATE command - empty columns list throws an exception" $ do
             let cmd = Create []
-            evaluate (applyOutputCommand cmd) `shouldThrow` (== InvalidArgCountException "0")
+            evaluate (force (applyOutputCommand cmd)) `shouldThrow` (== InvalidArgCountException "0")
 
 inputTests :: Spec
 inputTests = describe "LibControl.openTable"  $ do
                 it "openTable opens when file valid" $ do
                     table <- openTable "test/example1.csv"
                     table `shouldBe` exampleTable1
-                    
+
                 it "openTable throws an exception when unable to open file" $ do
                     openTable "nonexistent" `shouldThrow` (== IOTableException "nonexistent")
 
@@ -298,3 +303,4 @@ main = hspec $ do
     parsersTests
     commandsTests
     inputTests
+    -- TODO: test (if not tested yet) that header column names should differ - also for rename, add and create, create should be nonempty
