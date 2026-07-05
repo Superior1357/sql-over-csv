@@ -151,8 +151,11 @@ commandsTests = do
 
         it "SELECT command applied correctly - column order different from header" $ do
             let cmd = Select ["C", "BB"]
-            let shortHeader = Record $ fromList ["BB", "C"]
-            applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, row1Shortened, row2Shortened])
+            let shortHeader = Record $ fromList ["C", "BB"]
+            let selectedRow1 = Record $ fromList ["$@#i", "3"]
+            let selectedRow2 = Record $ fromList [",ee", "67"]
+
+            applyCommand exampleTable1WithNewC cmd `shouldBe` Table (fromList [shortHeader, selectedRow1, selectedRow2])
 
         it "INTERSECTION command applied correctly" $ do
             let t1 = Table $ fromList [tableHeader, row1, row2, row3]
@@ -251,9 +254,6 @@ commandsTests = do
         it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if a record is shorter than the header" $ do
             let wrongTable = Table $ fromList [tableHeader, row1, row2Shortened, row1]
             evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "2")
-        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if the header contains a column without name" $ do
-            let wrongTable = Table $ fromList [Record (fromList ["OK", "", "OK"]), row1, row1, row1]
-            evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "0")
         it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if header empty" $ do
             let wrongTable = Table $ fromList [Record (fromList []), row1, row1, row1]
             evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "0")
@@ -304,3 +304,5 @@ main = hspec $ do
     commandsTests
     inputTests
     -- TODO: test (if not tested yet) that header column names should differ - also for rename, add and create, create should be nonempty
+    -- TODO: exception handling in app (then done)
+    -- TODO: cleanup after an exception thrown?

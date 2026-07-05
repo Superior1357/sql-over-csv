@@ -76,7 +76,7 @@ openTable path = do
             if exists then do
                 B.readFile path
             else
-                pure ""
+                throw $ IOTableException path
 
 saveTable :: FilePath -> CommandTable -> IO ()
 saveTable path (Table t) = do
