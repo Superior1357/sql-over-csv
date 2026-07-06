@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -fno-cse #-}
 
 module Main where
-import LibControl (runCommand, handleException)
+import LibControl (runCommand, translateException)
 import LibExceptions ( ApplicationException )
 
 import System.Console.CmdArgs.Implicit
@@ -19,13 +19,12 @@ nonInteractive = NonInteractive { command = def &= help "Command to execute" &= 
 interactive :: Args
 interactive = Interactive &= auto
 
-
 runSafe :: String -> IO ()
 runSafe s = do
   result <- try $ LibControl.runCommand s :: IO (Either ApplicationException ())
   case result of
     Right r -> pure r
-    Left exc -> handleException exc
+    Left exc -> putStrLn $ translateException exc
 
 interactiveSession :: IO ()
 interactiveSession = forever $ do

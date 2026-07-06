@@ -254,12 +254,19 @@ commandsTests = do
         it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if a record is shorter than the header" $ do
             let wrongTable = Table $ fromList [tableHeader, row1, row2Shortened, row1]
             evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "2")
-        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if header empty" $ do
+        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if the header empty" $ do -- TODO: does it make any sense
             let wrongTable = Table $ fromList [Record (fromList []), row1, row1, row1]
             evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "0")
+        it "Commands.applyCommand -> InvalidTableFormatExceptionThrown if the header contains duplicit column names" $ do
+            let wrongTable = Table $ fromList [Record (fromList ["AAA", "BB", "AAA"]), row1, row1, row1]
+            evaluate (force (applyCommand wrongTable (Delete NoCondition))) `shouldThrow` (== InvalidTableFormatException "0")
+
 
         it "Commands.correspondingIndex -> ColumnNotFoundException thrown if column index not found" $ evaluate (force (force (correspondingIndex tableHeader "NOT PRESENT"))) `shouldThrow` (== ColumnNotFoundException "NOT PRESENT")
         it "Command.fIntInterpreted -> UnableToInterpretException thrown if unable to intepret a field as an Int" $ evaluate (force (fIntInterpreted "33" (\a b -> a == 3 || b == 4) "4hello")) `shouldThrow` (== UnableToInterpretException "4hello")
+        
+        it "CREATE command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (force (create ["AAA", "BB", "AAA"])) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
+        it "CREATE command empty column list - InvalidArgCountException thrown" $ evaluate (force (create [])) `shouldThrow` (== InvalidArgCountException "0")
 
         it "INSERT command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (insert exampleTable1 ["AAA", "nonsense"] [Record ["11", "22"], Record ["AA", "AA"]])) `shouldThrow` (== ColumnNotFoundException "nonsense")
         it "INSERT command invalid inserted VALUES item length - InvalidArgCountException thrown" $ evaluate (force (insert exampleTable1 ["AAA", "BB"] [Record ["11", "22"], Record ["11", "22", "33"]])) `shouldThrow` (== InvalidArgCountException "3")
@@ -269,7 +276,11 @@ commandsTests = do
         it "UPDATE command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (force (update exampleTable1 [("AAA", "1"), ("AAA", "3"), ("BB", "2")] NoCondition)) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
 
         it "ALTER DROP command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (alterDrop exampleTable1 "nonsense")) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        
         it "ALTER RENAME command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (alterRename exampleTable1 "nonsense" "not necessary")) `shouldThrow` (== ColumnNotFoundException "nonsense")
+        it "ALTER RENAME trying to rename to an existing column name - ColumnNameDuplicatedException thrown" $ evaluate (force (alterRename exampleTable1 "AAA" "BB")) `shouldThrow` (== ColumnNameDuplicatedException "BB")
+
+        it "ALTER ADD command trying to add an existing column - ColumnNameDuplicatedException thrown" $ evaluate (force (alterAdd exampleTable1 "BB")) `shouldThrow` (== ColumnNameDuplicatedException "BB")
 
         it "SELECT command invalid column name - ColumnNotFoundException thrown" $ evaluate (force (select exampleTable1 ["AAA", "nonsense"]))  `shouldThrow` (== ColumnNotFoundException "nonsense")
         it "SELECT command duplicate column name -- ColumnNameDuplicatedException thrown" $ evaluate (force (select exampleTable1 ["AAA", "BB", "AAA"])) `shouldThrow` (== ColumnNameDuplicatedException "AAA")
@@ -303,6 +314,4 @@ main = hspec $ do
     parsersTests
     commandsTests
     inputTests
-    -- TODO: test (if not tested yet) that header column names should differ - also for rename, add and create, create should be nonempty
-    -- TODO: exception handling in app (then done)
-    -- TODO: cleanup after an exception thrown?
+    -- TODO: cleanup after an exception thrown? -- it should not destroy the target file

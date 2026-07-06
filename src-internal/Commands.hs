@@ -31,7 +31,10 @@ intToByteString :: Int -> ByteString
 intToByteString = toStrict.toLazyByteString.intDec
 
 create :: [ColumnType] -> CommandTable
-create colNames = Table $ singleton (Record $ fromList colNames)
+create [] = throw $ InvalidArgCountException "0"
+create colNames = case checkColumnsForDuplicate colNames of
+                    Nothing -> Table $ singleton (Record $ fromList colNames)
+                    Just err -> throw err
 
 correspondingIndex :: Header -> ColumnType -> Int
 correspondingIndex (Record header) colName = case V.findIndex (== colName) header of
@@ -124,7 +127,7 @@ select table cols = case checkColumnsForDuplicate cols of
         indices = correspondingIndices header $ fromList cols
 
 alterAdd :: CommandTable -> ColumnType -> CommandTable
-alterAdd table colName = makeTable newHeader newRecords
+alterAdd table colName = if colName `V.notElem` h then makeTable newHeader newRecords else throw $ ColumnNameDuplicatedException colName
     where
         newHeader = Record $ h V.++ V.singleton colName
         newRecords = V.map (\(Record r) -> Record $ V.snoc r "") recs
@@ -149,7 +152,11 @@ alterRename table current new = case makeChecks of
     where
         newHeader = Record $ V.map (\c -> if c == current then new else c) header
         (Record header, recs) = divide table
-        makeChecks = if current `elem` header then Nothing else Just $ ColumnNotFoundException current
+        
+        makeChecks
+            | current `notElem` header = Just $ ColumnNotFoundException current
+            | new `elem` header = Just $ ColumnNameDuplicatedException new
+            | otherwise = Nothing
 
 applyAlterCommand :: CommandTable -> AlterType -> CommandTable
 applyAlterCommand table (Add colName) = alterAdd table colName
@@ -179,7 +186,11 @@ checkTable :: CommandTable -> Maybe CommandException
 checkTable tab@(Table t) = if tableEmpty then Just $ InvalidTableFormatException "0" else
                        let (Record header, recs) = divide tab; colCount = V.length header in
                         if colCount == 0 then Just $ InvalidTableFormatException "0" else
-                        tryGetFirstRecordOfUnMatchingSize colCount recs
+                        case checkColumnsForDuplicate $ V.toList header of
+                            Nothing -> tryGetFirstRecordOfUnMatchingSize colCount recs
+                            Just (ColumnNameDuplicatedException _) -> Just $ InvalidTableFormatException "0"
+                            Just err -> throw err
+
     where
         tableEmpty = V.length t == 0
         tryGetFirstRecordOfUnMatchingSize size recs = case dropWhile (\(_, Record r) -> V.length r == size) $ zip [1..] (V.toList recs) of

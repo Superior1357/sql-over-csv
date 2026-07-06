@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module LibControl (runCommand, openTable, handleException) where
+module LibControl (runCommand, openTable, translateException) where
 
 import LibExceptions
 import Parsers (commandParser, ParsedIOCmdData)
@@ -10,6 +10,7 @@ import Commands
       applyTwoTableCommand,
       IOCmdData, applyOutputCommand )
 
+import CommandExceptions (CommandException(..))
 import DataTypes
 
 import Text.Megaparsec (runParser, errorBundlePretty)
@@ -26,6 +27,7 @@ import qualified Data.Text.Encoding as TE
 import System.Directory (doesFileExist)
 import qualified Data.Bifunctor
 import Control.Exception (throw)
+import Control.Exception (try)
 
 toByteString :: String -> ByteString
 toByteString = TE.encodeUtf8 . T.pack
@@ -88,9 +90,15 @@ saveTable path (Table t) = do
 runCommand :: String -> IO ()
 runCommand c = do
     case runParser commandParser "" c of
-        Right cmd -> go cmd
+        Right cmd -> safeGo cmd
         Left b -> throw $ ParseException b
     where
+        safeGo cmd = do
+            result <- try $ go cmd :: IO (Either CommandException ())
+            case result of
+                Right r -> pure r
+                Left e -> throw $ CmdException e
+
         go (OneTableCmd csvPath parsedData) = do
             resultTable <- getResultTable1 csvPath parsedData
             saveTable csvPath resultTable
@@ -113,6 +121,9 @@ runCommand c = do
             t2 <- openTable t2_path
             pure $ applyTwoTableCommand t1 t2 op
 
-handleException :: ApplicationException -> IO ()
-handleException (IOTableException m) = print m
-handleException (ParseException b) = putStrLn $ errorBundlePretty b
+translateException :: ApplicationException -> String
+translateException (IOTableException m) = m
+translateException (ParseException b) = errorBundlePretty b
+translateException (CmdException e) = translateCmdException e
+    where
+        translateCmdException = show

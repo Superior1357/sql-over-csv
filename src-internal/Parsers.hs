@@ -81,7 +81,7 @@ alterParser = space1 *> (Alter <$> choice [
 insertParser :: Parser ParsedIOCmdData
 insertParser = space1 *> (Insert <$> parseList <* space1 <* string "VALUES" <* space1 <*> recordList)
     where
-        recordList = map Record <$> (parseList `sepBy1` char ',')
+        recordList = map Record <$> (parseList `sepBy1` (space *> char ',' <* space))
 
 updateParser :: Parser ParsedIOCmdData
 updateParser = space1 *> string "SET" *> space1 *> (Update <$> parseDictionary <* space <*> whereParser)
