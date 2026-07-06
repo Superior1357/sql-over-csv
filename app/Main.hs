@@ -19,6 +19,7 @@ nonInteractive = NonInteractive { command = def &= help "Command to execute" &= 
 interactive :: Args
 interactive = Interactive &= auto
 
+-- | Run a specific SQL-like command. All application exceptions are caught and handled.
 runSafe :: String -> IO ()
 runSafe s = do
   result <- try $ LibControl.runCommand s :: IO (Either ApplicationException ())
@@ -26,6 +27,7 @@ runSafe s = do
     Right r -> pure r
     Left exc -> putStrLn $ translateException exc
 
+-- | Launch an infinite interactive session.
 interactiveSession :: IO ()
 interactiveSession = forever $ do
   putStr "> "

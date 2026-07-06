@@ -98,6 +98,7 @@ selectParser = do
     tableName <- supportedFilePath
     pure $ OneTableCmd tableName $ IOCmd $ Select colNames
 
+-- | Parser for all supported commands as given in specification.
 commandParser :: Parser ParsedCommand
 commandParser = space *> choice [
                     string "CREATE" *> assembleOneTableCmd (OutputCmd <$> createParser),

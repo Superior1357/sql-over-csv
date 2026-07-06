@@ -315,3 +315,4 @@ main = hspec $ do
     commandsTests
     inputTests
     -- TODO: cleanup after an exception thrown? -- it should not destroy the target file
+    -- TODO: two table commands should have their respective checks too
