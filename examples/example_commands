@@ -1,0 +1,16 @@
+CREATE students (name, student_id);
+INSERT INTO students (name, student_id) VALUES (Alice, 1), (Bob, 2), (Charlie, 3);
+UPDATE students SET (name = Ann) WHERE student_id = 1;
+ALTER students ADD age;
+UPDATE students SET (age = 20) WHERE student_id = 1;
+ALTER students RENAME COLUMN student_id TO id;
+ALTER students DROP COLUMN age;
+SELECT (name, id) FROM students;
+DELETE FROM students WHERE id = 3;
+CREATE users (name, id);
+INSERT INTO users (name, id) VALUES (Alice, 1), (Bob, 2), (Charlie, 3);
+CREATE more_users (name, id);
+INSERT INTO more_users (name, id) VALUES (Bob, 2), (Diana, 4), (Eve, 5);
+UNION users, more_users INTO combined;
+INTERSECTION users, more_users INTO shared;
+DIFFERENCE users, more_users INTO unique_users;

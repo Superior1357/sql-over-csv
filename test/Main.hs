@@ -315,7 +315,4 @@ main = hspec $ do
     commandsTests
     inputTests
 
-    -- TODO: cleanup after an exception thrown? -- it should not destroy the target file
     -- TODO: two table commands should have their respective checks too - maybe should be checked upon opening, not later
-    -- TODO: parsers - why not always consume the following space?
-    -- TODO: better structure exceptions?

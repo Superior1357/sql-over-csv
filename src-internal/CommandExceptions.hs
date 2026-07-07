@@ -9,7 +9,7 @@ type ErrorMessage = ByteString
 data CommandException = ColumnNotFoundException ErrorMessage |
                         ColumnNameDuplicatedException ErrorMessage |
                         UnableToInterpretException ErrorMessage |
-                        InvalidArgCountException ErrorMessage | -- TODO: this is not very descriptive
+                        InvalidArgCountException ErrorMessage |
                         HeadersDifferException ErrorMessage |
                         InvalidTableFormatException ErrorMessage deriving (Show, Eq)
 

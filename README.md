@@ -1,109 +1,139 @@
 # CSV-HAS-SQL
-An easy-to-use and efficient Haskell library providing SQL-like queries over CSV files.
-## Features
-- create a CSV file from given specification
-- edit records with a given key
-- add/remove columns
-- set operations (intersection, union, difference)
-## Usage
-When run without arguments, the program reads the standard input. 
-Commands are evaluated immediately.
-### Options
-    -c      Run a command directly without launching the interactive terminal.
-    -h      Show this help and exit.
-### Commands
-#### `CREATE`
-Create a csv file with the given name, header and store it in the working directory.
 
-```
-CREATE table_name (
-    column1_name, 
-    column2_name,
-    ...,
-    columnN_name
-);
-```
-##### Example
-###### Input
-    CREATE name_ids (name, id);
-###### Output
-> ./name_ids.csv:
-```
-name,id
+CSV-HAS-SQL is a small command-line tool for working with CSV files using SQL-like commands. It lets you create tables, add or update rows, change columns, filter data, and combine tables without needing a full database server.
 
+## What this application can do
+
+- Create a new CSV table from a list of column names
+- Insert rows into an existing table
+- Update or delete rows with a WHERE condition
+- Add, drop, or rename columns
+- Select specific columns from a table
+- Combine tables with UNION, INTERSECTION, or DIFFERENCE
+
+## Quick start
+
+From the project root, build and run the application:
+
+```bash
+cabal build
+cabal run csv-has-sql -- -h
 ```
 
-#### `INSERT INTO`
-Add new records with specified values to a specified table.
-```
-INSERT INTO table_name (column1 column2, column3, ...)
-VALUES (value11, value12, value13, ...),
-       (value21, value22, value23, ...);
+The program supports two modes:
+
+- Interactive mode: run it without arguments and enter commands line by line
+- One-shot mode: use `-c` to run a single command
+
+Example:
+
+```bash
+cabal run csv-has-sql -- -c "CREATE students (name, id);"
 ```
 
-#### `UPDATE`
-Update or modify one or more records in the table.
-```
-UPDATE table_name
-SET (column1 = value1, column2 = value2, ...)
-WHERE condition;
+This creates a file named `students.csv` in the current working directory.
+
+## Basic usage
+
+All commands must end with a semicolon `;`.
+
+### Create a table
+
+```sql
+CREATE table_name (column1, column2, column3);
 ```
 
-#### `WHERE`
-The WHERE clause is used to extract only those records that fulfill a specific condition.
-##### Supported operators
-|  Operator  | Description |
-|    ---     |     ---     |
-|     =      |    Equal   |
-|     >      | Greater than |
-|     <      | Less than |
-|     >=     | Greater than or equal |
-|     <=     | Less than or equal |
-|     <>     | Not equal. |
-|     IN     | One of the specified values.
+Example:
 
-#### `DELETE FROM`
-Delete existing records in the table.
+```sql
+CREATE students (name, id);
 ```
+
+### Insert data
+
+```sql
+INSERT INTO table_name (column1, column2) VALUES (value1, value2);
+```
+
+Example:
+
+```sql
+INSERT INTO students (name, id) VALUES (Alice, 1), (Bob, 2);
+```
+
+### Update rows
+
+```sql
+UPDATE table_name SET (column1 = value1, column2 = value2) WHERE condition;
+```
+
+Example:
+
+```sql
+UPDATE students SET (name = Anna) WHERE id = 1;
+```
+
+### Delete rows
+
+```sql
 DELETE FROM table_name WHERE condition;
 ```
-#### ALTER
-Add, modify or delete columns.
-##### ADD
-Add a column with the given name.
+
+Example:
+
+```sql
+DELETE FROM students WHERE id = 2;
 ```
+
+### Alter columns
+
+```sql
 ALTER table_name ADD column_name;
-```
-##### DROP
-Delete a column with the given name.
-```
 ALTER table_name DROP COLUMN column_name;
+ALTER table_name RENAME COLUMN old_name TO new_name;
 ```
-##### RENAME
-Rename a column.
+
+### Select columns
+
+```sql
+SELECT (column1, column2) FROM table_name;
 ```
-ALTER table_name RENAME COLUMN old_column_name TO new_column_name;
+
+### Set operations
+
+```sql
+UNION table1, table2 INTO table3;
+INTERSECTION table1, table2 INTO table3;
+DIFFERENCE table1, table2 INTO table3;
 ```
-#### SELECT
-Select data from a table.
+
+## WHERE conditions
+
+The WHERE clause filters rows based on a condition.
+
+Supported operators:
+
+- `=`
+- `>`
+- `<`
+- `>=`
+- `<=`
+- `<>`
+- `IN`
+
+Example:
+
+```sql
+SELECT (name) FROM students WHERE id >= 2;
 ```
-SELECT (column1, column2, ...)
-FROM table_name;
-```
-#### UNION
-Make a union of 2 tables of the same type.
-```
-UNION table1_name, table2_name INTO table3_name;
-```
-#### INTERSECTION
-Find the intersection of records of 2 tables of the same type.
-```
-INTERSECTION table1_name, table2_name INTO table3_name;
-```
-#### DIFFERENCE
-Find the difference of records of 2 tables
-of the same type.
-```
-DIFFERENCE table1_name, table2_name INTO table3_name;
-```
+
+Numeric comparisons are applied only when the values can be interpreted as integers.
+
+## Notes
+
+- Tables are stored as CSV files on disk.
+- The tool reads and writes files using the given table name as the file path.
+- Commands are evaluated immediately when entered.
+- For a more detailed reference, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+- For developer-oriented documentation, see [docs/PROGRAMMER_GUIDE.md](docs/PROGRAMMER_GUIDE.md).
 
