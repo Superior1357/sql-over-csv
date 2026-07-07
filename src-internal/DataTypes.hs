@@ -3,6 +3,7 @@ module DataTypes where
 newtype Record vs = Record vs deriving (Show, Eq)
 newtype Table rs = Table rs deriving (Show, Eq)
 
+-- | Where condition - a column name (c) and a value (v)
 data WhereCondition c v = Equal c v
                      |
                       Greater c v
@@ -19,6 +20,7 @@ data WhereCondition c v = Equal c v
                      |
                       NoCondition deriving (Show, Eq)
 
+-- | Alter command data - column name (c)
 data AlterData c = Add { columnName :: c } |
                  Drop { columnName :: c } |
                  Rename { 
@@ -26,8 +28,10 @@ data AlterData c = Add { columnName :: c } |
                     newName :: c
                  } deriving (Show, Eq)
 
+-- | Supported set operation types.
 data SetOperation = Intersection | Union | Difference deriving (Show, Eq)
 
+-- | Command data - column name (c), value type (v), table type (t)
 data (Show c, Show v, Eq c, Eq v, Show t, Eq t) => IOCommandData c v t = 
     Insert {
         columns :: [c],
@@ -56,8 +60,10 @@ newtype (Show c, Eq c) => OutputCommandData c =
         columnNames :: [c]
     } deriving (Eq, Show)
 
+-- | Command data - if input command table necessary - IOCmd, otherwise OutputCmd.
 data CommandData c v t = IOCmd (IOCommandData c v t) | OutputCmd (OutputCommandData c) deriving (Show, Eq)
 
+-- | Command - OneTableCmd (one table necessary) or TwoTableCmd (two tables necessary).
 data (Show d, Eq d, Show d2, Eq d2) => Command d d2 =
     OneTableCmd {
         csv_name :: FilePath,
