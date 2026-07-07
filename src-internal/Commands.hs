@@ -262,6 +262,11 @@ applyCommand tableUnsafe = case checkTable tableUnsafe of
 applyOutputCommand :: OutputCmdData -> CommandTable
 applyOutputCommand (Create colNames) = if null colNames then throw $ InvalidArgCountException "0" else create colNames
 
--- TODO: should throw an exception if the table's format is not supported
 applyTwoTableCommand :: CommandTable -> CommandTable -> SetOperation -> CommandTable
-applyTwoTableCommand = applySetOperationCommand
+applyTwoTableCommand t1 t2 = case checkTable t1 of
+    Nothing -> case checkTable t2 of
+        Nothing -> applySetOperationCommand t1 t2
+        Just exc -> throw exc
+    Just exc -> throw exc
+    
+    
