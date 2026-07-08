@@ -45,16 +45,19 @@ The file handling and error translation code is in:
 
 ## 3. Core data structures
 
-The project uses a few small algebraic data types to model tables and commands.
+The project uses a few small data types to model tables and commands.
 
 ### 3.1 Records and tables
 
-In [src-internal/DataTypes.hs](../src-internal/DataTypes.hs), tables are represented as a header plus a vector of rows.
+In [src-internal/DataTypes.hs](../src-internal/DataTypes.hs), tables are represented as a vector of records.
 
 Key types:
 
 - `Record vs` — a single row or header row
 - `Table rs` — a table containing rows and a header
+- `Command` - a placeholder for parsed data
+- `IOCommandData` - data for commands that require an input table
+- `OutputCommandData` - data for commands that don't require an input table
 - `WhereCondition c v` — a parsed filter condition
 - `AlterData c` — ALTER subcommands
 - `SetOperation` — `Union`, `Intersection`, or `Difference`
@@ -186,7 +189,7 @@ From the project root:
 
 ```bash
 cabal build
-cabal run csv-has-sql -- -h
+cabal run csv-has-sql
 ```
 
 For tests:

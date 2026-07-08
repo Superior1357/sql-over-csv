@@ -1,8 +1,8 @@
 # CSV-HAS-SQL
 
-CSV-HAS-SQL is a small command-line tool for working with CSV files using SQL-like commands. It lets you create tables, add or update rows, change columns, filter data, and combine tables without needing a full database server.
+CSV-HAS-SQL is a small command-line tool for working with CSV files using SQL-like commands. It lets you create tables, add or update rows, change columns, filter data, and combine tables without needing a database server.
 
-## What this application can do
+## Features
 
 - Create a new CSV table from a list of column names
 - Insert rows into an existing table
@@ -17,13 +17,18 @@ From the project root, build and run the application:
 
 ```bash
 cabal build
-cabal run csv-has-sql -- -h
+cabal run csv-has-sql
+```
+
+For help run:
+```bash
+cabal run csv-has-sql -- --help
 ```
 
 The program supports two modes:
 
 - Interactive mode: run it without arguments and enter commands line by line
-- One-shot mode: use `-c` to run a single command
+- One-shot mode: type noninteractive and use `-c` to run a single command
 
 Example:
 
@@ -31,7 +36,7 @@ Example:
 cabal run csv-has-sql -- noninteractive -c "CREATE students (name, id);"
 ```
 
-This creates a file named `students.csv` in the current working directory.
+This creates a file named `students` with desired columns in the current working directory.
 
 ## Basic usage
 
@@ -93,10 +98,21 @@ ALTER table_name DROP COLUMN column_name;
 ALTER table_name RENAME COLUMN old_name TO new_name;
 ```
 
+Example:
+
+```sql
+ALTER students RENAME COLUMN id TO student_id;
+```
+
 ### Select columns
 
 ```sql
 SELECT (column1, column2) FROM table_name;
+```
+
+
+```sql
+SELECT (name) FROM students;
 ```
 
 ### Set operations
@@ -105,6 +121,10 @@ SELECT (column1, column2) FROM table_name;
 UNION table1, table2 INTO table3;
 INTERSECTION table1, table2 INTO table3;
 DIFFERENCE table1, table2 INTO table3;
+```
+
+```sql
+UNION students, students2 INTO students3;
 ```
 
 ## WHERE conditions
@@ -124,7 +144,7 @@ Supported operators:
 Example:
 
 ```sql
-SELECT (name) FROM students WHERE id >= 2;
+UPDATE students SET (name = "Anakin") WHERE name = Anna;
 ```
 
 Numeric comparisons are applied only when the values can be interpreted as integers.

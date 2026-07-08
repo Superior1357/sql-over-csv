@@ -7,16 +7,16 @@ This guide explains how to use CSV-HAS-SQL from the command line.
 You can start the tool in two ways:
 
 - Interactive mode: run the program without arguments
-- One-shot mode: use the `-c` option to run one command
+- One-shot mode: type interactive and use the `-c` option to run one command
 
 Example:
 
 ```bash
-cabal run csv-has-sql --
+cabal run csv-has-sql
 ```
 
 ```bash
-cabal run csv-has-sql -- -c "CREATE students (name, id);"
+cabal run csv-has-sql -- noninteractive -c "CREATE students (name, id);"
 ```
 
 ## 2. General rules
@@ -50,6 +50,8 @@ Adds one or more rows to an existing table.
 INSERT INTO table_name (column1, column2) VALUES (value1, value2);
 ```
 
+Example:
+
 ```sql
 INSERT INTO students (name, id) VALUES (Alice, 1), (Bob, 2);
 ```
@@ -59,7 +61,7 @@ INSERT INTO students (name, id) VALUES (Alice, 1), (Bob, 2);
 Updates values in rows that satisfy a WHERE condition.
 
 ```sql
-UPDATE table_name SET (column1 = value1) WHERE condition;
+UPDATE table_name SET (column1 = value1, column2 = value2) WHERE condition;
 ```
 
 Example:
@@ -159,13 +161,12 @@ SELECT (name) FROM students WHERE id >= 2;
 ## 5. Example workflow
 
 ```bash
-cabal run csv-has-sql -- -c "CREATE students (name, id);"
-cabal run csv-has-sql -- -c "INSERT INTO students (name, id) VALUES (Alice, 1), (Bob, 2);"
-cabal run csv-has-sql -- -c "SELECT (name, id) FROM students;"
+cabal run csv-has-sql -- noninteractive -c "CREATE students (name, id);"
+cabal run csv-has-sql -- noninteractive -c "INSERT INTO students (name, id) VALUES (Alice, 1), (Bob, 2);"
+cabal run csv-has-sql -- noninteractive -c "SELECT (name) FROM students;"
 ```
 
 ## 6. Tips
 
-- Use simple column names without spaces
 - Keep values consistent with the column types you intend to compare
 - If you want to test commands interactively, start the program without arguments and type commands one by one

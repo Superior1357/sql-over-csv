@@ -37,7 +37,7 @@ interactiveSession = forever $ do
 
 main :: IO ()
 main = do
-  arguments <- cmdArgs (modes [nonInteractive, interactive])
+  arguments <- cmdArgs (modes [nonInteractive, interactive] &= summary "SQL-like queries over CSV files")
   case arguments of
     NonInteractive { command = cmd } -> runSafe cmd
     Interactive -> interactiveSession
