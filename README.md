@@ -150,7 +150,7 @@ UPDATE students SET (name = "Anakin") WHERE name = Anna;
 Numeric comparisons are applied only when the values can be interpreted as integers.
 
 ## Notes
-
+- For an example run, change directory to examples and run examples.sh with the executable file path as a sole argument.
 - Tables are stored as CSV files on disk.
 - The tool reads and writes files using the given table name as the file path.
 - Commands are evaluated immediately when entered.
