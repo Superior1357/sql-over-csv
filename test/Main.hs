@@ -314,5 +314,3 @@ main = hspec $ do
     parsersTests
     commandsTests
     inputTests
-
-    -- TODO: two table commands should have their respective checks too - maybe should be checked upon opening, not later

@@ -139,4 +139,5 @@ translateException (IOTableException m) = m
 translateException (ParseException b) = errorBundlePretty b
 translateException (CmdException e) = translateCmdException e
     where
-        translateCmdException = show
+        translateCmdException (InvalidTableFormatException m) = "Invalid table format at line " ++ show m
+        translateCmdException ex = show ex

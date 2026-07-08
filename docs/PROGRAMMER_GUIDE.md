@@ -182,6 +182,7 @@ If you want to extend the application, the natural places to modify are:
 - add a new command implementation in [src-internal/Commands.hs](../src-internal/Commands.hs)
 - extend the command data model in [src-internal/DataTypes.hs](../src-internal/DataTypes.hs)
 - update the CLI entry point in [app/Main.hs](../app/Main.hs) if the interface changes
+- fix the problem where an input table is deleted when an exception is thrown (requires program refactor)
 
 ## 10. Build and run
 
