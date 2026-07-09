@@ -27,6 +27,7 @@ import qualified Data.Text.Encoding as TE
 import System.Directory (doesFileExist)
 import qualified Data.Bifunctor
 import Control.Exception ( throw, try )
+import Control.DeepSeq (deepseq)
 
 -- | Convert a string to its respective ByteString representation.
 toByteString :: String -> ByteString
@@ -93,7 +94,7 @@ openTable path = do
 saveTable :: FilePath -> CommandTable -> IO ()
 saveTable path (Table t) = do
     let bString = encode $ V.toList stripped
-    BL.writeFile path bString
+    bString `deepseq` BL.writeFile path bString
     where
         stripped = V.map (\(Record r) -> r) t
 
